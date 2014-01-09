@@ -11,7 +11,7 @@ all: LikelihoodSolver utils
 		LikelihoodSolver/OneSuspectThreeUnknownsLikelihoodSolver.o \
 		LikelihoodSolver/OneSuspectTwoUnknownsLikelihoodSolver.o \
 		utils/LikelihoodUtil.o utils/FileReaderUtil.o utils/ProbabilityUtil.o \
-		-o Tide/labr
+		-o ../target/labr
 
 Configuration:
 	g++ -g -c Configuration.cpp
@@ -23,5 +23,5 @@ utils: Configuration
 	$(MAKE) -C utils
 
 clean:
-	rm -rf *.o */*.o Tide/labr*
+	rm -rf *.o */*.o ../target/labr*
 
