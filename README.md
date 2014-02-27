@@ -1,13 +1,3 @@
-# Downloads
-
-Currently 1.1.5 beta release
-
-[Mac](https://github.com/SCIEG/LabRetriever/releases/download/1.1.5/LabRetriever-1.1.5.dmg)
-
-[Windows](https://github.com/SCIEG/LabRetriever/releases/download/1.1.5/LabRetriever-1.1.5.msi)
-
-Linux (coming maybe? soon for Ubuntu)
-
 # Building it yourself
 
 This is for developers who want to make additions or fixes to the project.
@@ -29,12 +19,4 @@ On windows use MinGW to install make/gcc (put MinGW on your path and run mingw32
 
 Compile the labr program:
 
-    cd src
-    make
-
-Import the Tide project (src/Tide) in TideSDK Developer.
-
-Click "Test & Package" tab
-
-Click "Launch App"
-
+    run build.sh
