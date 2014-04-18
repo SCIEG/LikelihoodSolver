@@ -88,7 +88,7 @@ namespace LabRetriever {
     double calculateNoDropinProbability(const Configuration& config) {
        double dropinRate = config.dropinRate;
        int numOfAlleles = config.alleleProportions.size();
-       return (1 - 2 * dropinRate + pow(dropinRate, numOfAlleles)) / (1 - dropinRate);
+       return (1 - 2 * dropinRate + pow(dropinRate, numOfAlleles + 1)) / (1 - dropinRate);
     }
 
     double calculateNoDropinLogProbability(const Configuration& config) {
