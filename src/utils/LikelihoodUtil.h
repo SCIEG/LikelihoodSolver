@@ -28,12 +28,12 @@ using namespace std;
         double logProbRandomAllele1 = log(allele1##iter->second);                       \
                                                                                         \
         /* If the proportion is 0, then no need to calculate. */                        \
-        if (logProbRandomAllele1 == 0) continue;                                        \
+        if (logProbRandomAllele1 == LOG_ZERO) continue;                                 \
         for (map<string, double>::const_iterator allele2##iter = allele1##iter;         \
                 allele2##iter != alleleProportions.end(); allele2##iter++) {            \
             const string& allele2 = allele2##iter->first;                               \
             double logProbRandomAllele2 = log(allele2##iter->second);                   \
-            if (logProbRandomAllele2 == 0) continue;                                    \
+            if (logProbRandomAllele2 == LOG_ZERO) continue;                             \
             do
 
 #define END_CHOOSE_RANDOM_ALLELES                                                       \
@@ -53,7 +53,7 @@ using namespace std;
                 allele2##iter != alleleProportions.end(); allele2##iter++) {                \
             const string& allele2 = allele2##iter->first;                                   \
             double logProbHavingRandomAllele = allele2##iter->second;                       \
-            if (logProbHavingRandomAllele == 0) continue;                                   \
+            if (logProbHavingRandomAllele == LOG_ZERO) continue;                            \
             do
 
 #define END_CHOOSE_ONE_RANDOM_ALLELE                                                        \

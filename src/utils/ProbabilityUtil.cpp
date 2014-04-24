@@ -12,9 +12,9 @@
 
 #include "ProbabilityUtil.h"
 #include <cmath>
-#include <float.h>
 
 namespace LabRetriever {
+    // TODO: log(0) isn't always defined in all implementations; replace with -inf.
     const double LOG_ZERO = log(0);
     const double LOG_TWO = log(2);
 
@@ -70,7 +70,7 @@ namespace LabRetriever {
     }
 
     double calculateKDropoutsLogProbability(double alpha, double dropoutRate, unsigned int k) {
-        if (dropoutRate == 0) return -DBL_MAX;
+        if (dropoutRate == 0) return LOG_ZERO;
         if (k == 0) return 0;
         double logAlpha = log(alpha);
         double logDropoutProb = log(dropoutRate);

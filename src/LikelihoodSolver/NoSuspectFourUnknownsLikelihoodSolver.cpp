@@ -159,7 +159,7 @@ namespace LabRetriever {
             } END_CHOOSE_ONE_RANDOM_ALLELE;
         }
         // Divide by two for the two alleles you can choose from the suspect.
-        oneIBDLogLikelihood -= log(2.0);
+        oneIBDLogLikelihood -= LOG_TWO;
         // TODO: not correct.
         numComplete = totalToComplete - pow(numAlleles, 4);
 
