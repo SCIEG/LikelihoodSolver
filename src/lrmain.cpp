@@ -1,5 +1,8 @@
 #include "lrmain.h"
 
+#include <cstdlib>
+#include <cerrno>
+
 void outputData(const set<string>& lociToRun, const vector<LikelihoodSolver*>& likelihoodSolvers,
         const map<Race, vector<map<string, double> > >& raceToSolverIndexToLocusLogProb,
         const map<Race, vector<double> >& raceToSolverIndexToLogProb,
@@ -104,26 +107,24 @@ map<Race, vector<double> > run(const string& executablePath, const string& input
     for (; csvIndex < inputData.size(); csvIndex++) {
         const vector<string>& row = inputData[csvIndex];
         if (row.size() == 0) continue;
+        char* endPtr;
 
         const string& header = row[0];
         if (header == "alpha") {
             if (row.size() <= 1) continue;
-            double value = atof(row[1].c_str());
-            if (value != 0) {
-                alpha = value;
-            }
+            double value = strtod(row[1].c_str(), &endPtr);
+            if (*endPtr != '\0' || errno != 0) continue;
+            alpha = value;
         } else if (header == "Drop-in rate") {
             if (row.size() <= 1) continue;
-            double value = atof(row[1].c_str());
-            if (value != 0) {
-                dropinRate = value;
-            }
+            double value = strtod(row[1].c_str(), &endPtr);
+            if (*endPtr != '\0' || errno != 0) continue;
+            dropinRate = value;
         } else if (header == "Drop-out rate") {
             if (row.size() <= 1) continue;
-            double value = atof(row[1].c_str());
-            if (value != 0) {
-                dropoutRate = value;
-            }
+            double value = strtod(row[1].c_str(), &endPtr);
+            if (*endPtr != '\0' || errno != 0) continue;
+            dropoutRate = value;
         } else if (header == "Race") {
             if (row.size() <= 1) continue;
             // Currently only expect one race or ALL. Change this to vector if multiple races
@@ -132,9 +133,17 @@ map<Race, vector<double> > run(const string& executablePath, const string& input
         } else if (header == "IBD Probs") {
             if (row.size() <= 3 || row[1].size() == 0 ||
                     row[2].size() == 0 || row[3].size() == 0 ) continue;
-            identicalByDescentProbability.zeroAllelesInCommonProb = atof(row[1].c_str());
-            identicalByDescentProbability.oneAlleleInCommonProb = atof(row[2].c_str());
-            identicalByDescentProbability.bothAllelesInCommonProb = atof(row[3].c_str());
+
+            double zeroAllelesInCommonProb = strtod(row[1].c_str(), &endPtr);
+            if (*endPtr != '\0' || errno != 0) continue;
+            double oneAlleleInCommonProb = strtod(row[2].c_str(), &endPtr);
+            if (*endPtr != '\0' || errno != 0) continue;
+            double twoAllelesInCommonProb = strtod(row[3].c_str(), &endPtr);
+            if (*endPtr != '\0' || errno != 0) continue;
+
+            identicalByDescentProbability.zeroAllelesInCommonProb = zeroAllelesInCommonProb;
+            identicalByDescentProbability.oneAlleleInCommonProb = oneAlleleInCommonProb;
+            identicalByDescentProbability.bothAllelesInCommonProb = twoAllelesInCommonProb;
         } else {
             unsigned int index = header.find("-");
             if (index == string::npos) continue;
