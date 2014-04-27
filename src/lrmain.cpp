@@ -11,7 +11,7 @@ void outputData(const set<string>& lociToRun, const vector<LikelihoodSolver*>& l
     // TODO: Output in proper format to file:
     stringstream outputStringStream;
     outputStringStream.setf(ios::scientific);
-    outputStringStream.precision(8);
+    outputStringStream.precision(4);
 
     for (unsigned int raceIndex = 0; raceIndex < races.size(); raceIndex++) {
         Race curRace = races[raceIndex];
