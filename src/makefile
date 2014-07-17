@@ -10,6 +10,7 @@ all: LikelihoodSolver utils
 		LikelihoodSolver/OneSuspectOneUnknownLikelihoodSolver.o \
 		LikelihoodSolver/OneSuspectThreeUnknownsLikelihoodSolver.o \
 		LikelihoodSolver/OneSuspectTwoUnknownsLikelihoodSolver.o \
+		LikelihoodSolver/UnknownsSolver.o \
 		utils/LikelihoodUtil.o utils/FileReaderUtil.o utils/ProbabilityUtil.o \
 		-o ../target/labr
 

@@ -291,7 +291,21 @@ int main(int argc, char *argv[]) {
     }
     if (argc > 2) {
         for (int i = 3; i < argc; i++) {
-            if (argv[i][0] == '0') {
+            if (argv[i][0] == 'u') {
+                if (argv[i][1] <= '9' && argv[i][1] >= '0') {
+                    unsigned int numUnknowns = argv[i][1] - '0';
+                    // TODO fix memory leak
+                    LikelihoodSolver* solver = new UnknownsSolver(numUnknowns * 2);
+                    solversToUse.push_back(solver);
+                }
+            } else if (argv[i][0] == 's') {
+                if (argv[i][1] <= '9' && argv[i][1] >= '0') {
+                    unsigned int numUnknowns = argv[i][1] - '0';
+                    // TODO fix memory leak
+                    LikelihoodSolver* solver = new SuspectUnknownsSolver(numUnknowns * 2);
+                    solversToUse.push_back(solver);
+                }
+            } else if (argv[i][0] == '0') {
                 switch(argv[i][1]) {
                 case '4':
                     solversToUse.push_back(LikelihoodSolver::getSolver(LikelihoodSolver::NO_SUSPECT_FOUR_UNKNOWNS));

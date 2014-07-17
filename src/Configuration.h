@@ -31,6 +31,7 @@ namespace LabRetriever {
 
             bool contains(const string& allele) const;
             const map<string, unsigned int>& getAlleleCounts() const;
+            unsigned int getAlleleCounts(const string& allele) const;
             const set<string>& getAlleles() const;
 
         private:

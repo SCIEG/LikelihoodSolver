@@ -37,6 +37,14 @@ namespace LabRetriever {
         return alleleCounts;
     }
 
+    unsigned int AlleleProfile::getAlleleCounts(const string& allele) const {
+        map<string, unsigned int>::const_iterator iter = alleleCounts.find(allele);
+        if (iter == alleleCounts.end()) {
+            return 0;
+        }
+        return iter->second;
+    }
+
     const set<string>& AlleleProfile::getAlleles() const {
         return alleles;
     }

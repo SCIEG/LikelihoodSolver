@@ -4,6 +4,7 @@
 #include "Configuration.h"
 #include "utils/FileReaderUtil.h"
 #include "LikelihoodSolver/LikelihoodSolver.h"
+#include "LikelihoodSolver/UnknownsSolver.h"
 #include "utils/ProbabilityUtil.h"
 #include <cstdlib>
 #include <iostream>
