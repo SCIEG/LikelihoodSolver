@@ -95,7 +95,7 @@ unsigned int perm(const map<string, unsigned int>& b) {
 
 double UnknownsSolverImpl::f(const string& allele, unsigned int count) const {
     const double oneAlleleFrequency = alleleProportions.find(allele)->second;
-    const double countAllelesFrequency = pow(oneAlleleFrequency, count);
+    const double countAllelesFrequency = pow(oneAlleleFrequency, (double) count);
     const unsigned int adjCount = count + alleleProfile.getAlleleCounts(allele);
 
     bool alleleIsMasked = data.maskedAlleles.count(allele) != 0;
