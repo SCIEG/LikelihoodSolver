@@ -26,9 +26,48 @@ UnknownsSolver::UnknownsSolver(unsigned int numUnknownAlleles) :
 
 double UnknownsSolver::getLogLikelihood(const Configuration& config) {
     AlleleProfile emptyProfile;
-    return log(UnknownsSolverImpl::getUnknownProbability(emptyProfile, config.data,
-            config.alleleProportions, config.alpha, config.dropoutRate, config.dropinRate,
-            calculateNoDropinProbability(config), numUnknownAlleles));
+    // TODO: If IBD probabilities are set, check that there are only two alleles in the profile.
+    if (config.identicalByDescentProbability.zeroAllelesInCommonProb == 1) {
+        return log(UnknownsSolverImpl::getUnknownProbability(emptyProfile, config.data,
+                config.alleleProportions, config.alpha, config.dropoutRate, config.dropinRate,
+                calculateNoDropinProbability(config), numUnknownAlleles));
+    } else {
+        double prob = 0;
+        if (config.identicalByDescentProbability.zeroAllelesInCommonProb != 0) {
+            prob += config.identicalByDescentProbability.zeroAllelesInCommonProb *
+                    UnknownsSolverImpl::getUnknownProbability(emptyProfile,
+                            config.data, config.alleleProportions, config.alpha,
+                            config.dropoutRate, config.dropinRate,
+                            calculateNoDropinProbability(config),
+                            numUnknownAlleles);
+        }
+        if (config.identicalByDescentProbability.oneAlleleInCommonProb != 0) {
+            const set<string>& suspectAlleles = config.suspectProfile.getAlleles();
+            for (set<string>::const_iterator iter = suspectAlleles.begin();
+                    iter != suspectAlleles.end(); iter++) {
+                AlleleProfile partialAlleleProfile;
+                partialAlleleProfile.addAllele(*iter);
+                // Divide the probability by 2, since you can choose one of two alleles.
+                prob += config.identicalByDescentProbability.oneAlleleInCommonProb / 2 *
+                        UnknownsSolverImpl::getUnknownProbability(
+                                        partialAlleleProfile, config.data,
+                                        config.alleleProportions, config.alpha,
+                                        config.dropoutRate, config.dropinRate,
+                                        calculateNoDropinProbability(config),
+                                        numUnknownAlleles - 1);
+            }
+        }
+        if (config.identicalByDescentProbability.bothAllelesInCommonProb != 0) {
+            prob += config.identicalByDescentProbability.bothAllelesInCommonProb *
+                    UnknownsSolverImpl::getUnknownProbability(
+                            config.suspectProfile, config.data,
+                            config.alleleProportions, config.alpha,
+                            config.dropoutRate, config.dropinRate,
+                            calculateNoDropinProbability(config),
+                            numUnknownAlleles - 2);
+        }
+        return log(prob);
+    }
 }
 
 SuspectUnknownsSolver::SuspectUnknownsSolver(unsigned int numUnknownAlleles) :
