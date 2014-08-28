@@ -47,8 +47,14 @@ double UnknownsSolver::getLogLikelihood(const Configuration& config) {
                     iter != suspectAlleles.end(); iter++) {
                 AlleleProfile partialAlleleProfile;
                 partialAlleleProfile.addAllele(*iter);
-                // Divide the probability by 2, since you can choose one of two alleles.
-                prob += config.identicalByDescentProbability.oneAlleleInCommonProb / 2 *
+                
+                double probabilityFactor =
+                    config.identicalByDescentProbability.oneAlleleInCommonProb;
+                if (config.suspectProfile.getAlleleCounts(*iter) == 1) {
+                    // Divide the probability by 2, since you can choose one of two alleles.
+                    probabilityFactor /= 2;
+                }
+                prob += probabilityFactor *
                         UnknownsSolverImpl::getUnknownProbability(
                                         partialAlleleProfile, config.data,
                                         config.alleleProportions, config.alpha,
