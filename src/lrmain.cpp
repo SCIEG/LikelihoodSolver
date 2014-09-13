@@ -105,6 +105,7 @@ map<Race, vector<double> > run(const string& executablePath, const string& input
     double alpha = 0.5;
     double dropinRate = 0.01;
     double dropoutRate = 0.01;
+    double fst = 0.01;
     Race race = ALL;
     IdenticalByDescentProbability identicalByDescentProbability(1, 0, 0);
     map<string, vector<string> > locusToSuspectAlleles;
@@ -134,6 +135,11 @@ map<Race, vector<double> > run(const string& executablePath, const string& input
             double value = strtod(row[1].c_str(), &endPtr);
             if (*endPtr != '\0' || errno != 0) continue;
             dropoutRate = value;
+        } else if (header == "fst") {
+           if (row.size() <= 1) continue;
+           double value = strtod(row[1].c_str(), &endPtr);
+           if (*endPtr != '\0' || errno != 0) continue;
+           fst = value;
         } else if (header == "Race") {
             if (row.size() <= 1) continue;
             // Currently only expect one race or ALL. Change this to vector if multiple races
@@ -267,7 +273,7 @@ map<Race, vector<double> > run(const string& executablePath, const string& input
             }
 
             map<string, double> alleleProp =
-                    getAlleleProportionsFromCounts(alleleCounts, suspectProfile);
+                    getAlleleProportionsFromCounts(alleleCounts, suspectProfile, fst);
 
             Configuration config(suspectProfile, replicateDatas, alleleProp,
                     identicalByDescentProbability, dropoutRate, dropinRate, alpha);

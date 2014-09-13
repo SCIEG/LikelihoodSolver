@@ -45,7 +45,7 @@ namespace LabRetriever {
      */
     map<string, double> getAlleleProportionsFromCounts(
             const map<string, unsigned int>& alleleCounts, const AlleleProfile& suspectProfile,
-            unsigned int samplingAdjustment = 2, double fst = 0.01);
+            double fst = 0.01, unsigned int samplingAdjustment = 2);
 
     /*
      * Calculates the probability of k alleles dropping out, given some extra data. The current

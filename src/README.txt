@@ -1,35 +1,3 @@
-GeneMapperOutputParser
-
-This is a program that reads the output from the program GeneMapper by David
-Balding, and generates an input file for LabRetriever. It requires that the
-output from the GeneMapper program contains Sample Data/File, Marker, and
-Allele X, where X is a number. The Sample Data/File should be unique per
-instance. Currently, the program only handles alleles found in
-"data/LocusAbbreviationMappings.csv".
-
-This program takes advantage of the fact that the assumed alleles and suspect
-alleles will tend to be the same values over and over again, but the data
-from the samples will be different. Thus, the user need only to input the
-assumed and suspect alleles once, and the unattributed alleles will be
-calculated from the GeneMapper data.
-
-To use the program, use "Browse" to load a GeneMapper output file and click
-"Load". Then, you can either fill out the assumed/suspect alleles, or
-add/remove samples to include in the LabRetriever input file. It does not matter
-in which order you do this in.
- - To fill out the assumed or suspect alleles, type
-   in the allele in the box, separated by spaces and/or commas. The "detected"
-   alleles is for reference--it shows the alleles read from the GeneMapper file.
- - To add/remove samples, double-click on the sample name on the left, and the
-   sample will move from "Samples to export" to "Samples to exclude" and vice
-   versa.
-Clicking on a sample will show what alleles have been detected in the sample.
-Leaving cells blank is okay--it will be created in the output file, but it will
-not be used, as long as the suspect alleles data is empty. (If there's no
-suspect data, then the sample there is useless.) When you are done, you can
-create an output file (which is the input file for LabRetriever) by typing an
-output file name, and clicking "Export".
-
 LabRetriever
 
 The input file is a CSV (Comma Separated Value) file where there are no empty
@@ -37,13 +5,14 @@ lines in between data, and each line is either
   - alpha,DECIMAL
   - Drop-in rate,DECIMAL
   - Drop-out rate,DECIMAL
+  - fst,DECIMAL
   - IBD Probs,DECIMAL,DECIMAL,DECIMAL
   - Race,RACE
   - XXX_Assumed,(ALLELE,)*
   - XXX_Suspected,(ALLELE,)*
   - XXX_Unattributed,(ALLELE,)*
 where, DECIMAL is a number between 0 and 1, RACE is either AFRICAN_AMERICAN,
-HISPANIC, or CAUCASIAN, and ALLELE is an allele for locus XXX. Here's what
+HISPANIC, CAUCASIAN, or ALL, and ALLELE is an allele for locus XXX. Here's what
 each input means:
   - alpha,DECIMAL
         Controls the probability of drop out for a homozygote allele. This
@@ -66,6 +35,9 @@ each input means:
         allele in common; the third, 2 alleles. A complete stranger would have
         a distribution of 1,0,0. A sibling would have 0.25,.5,.25.
         Default value:1,0,0
+  - fst,DECIMAL
+        This value is for adjusting the allele frequencies.
+        Default value: 0.01
   - Race,RACE
         The race of the person. This controls the allele population
         distribution, which is used to calculate the probability that a given

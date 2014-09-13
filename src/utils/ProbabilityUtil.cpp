@@ -33,7 +33,7 @@ namespace LabRetriever {
 
     map<string, double> getAlleleProportionsFromCounts(
             const map<string, unsigned int>& alleleCounts, const AlleleProfile& suspectProfile,
-            unsigned int samplingAdjustment, double fst) {
+            double fst, unsigned int samplingAdjustment) {
         const map<string, unsigned int>& suspectAlleleCounts = suspectProfile.getAlleleCounts();
         double totalCounts = 0, fstCorrection = (1-fst) / (1+fst);
         for (map<string, unsigned int>::const_iterator iter = alleleCounts.begin();
