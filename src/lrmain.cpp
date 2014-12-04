@@ -31,7 +31,7 @@ void outputData(const set<string>& lociToRun, const vector<LikelihoodSolver*>& l
                 raceToSolverIndexToLogProb.find(curRace)->second;
 
         // Output race
-        outputStringStream << stringFromRace(curRace) << endl;
+        outputStringStream << curRace << endl;
 
         // Output probability header
         outputStringStream << "Probabilities, total";
@@ -106,7 +106,7 @@ map<Race, vector<double> > run(const string& executablePath, const string& input
     double dropinRate = 0.01;
     double dropoutRate = 0.01;
     double fst = 0.01;
-    Race race = ALL;
+    Race race = ALL_RACE;
     IdenticalByDescentProbability identicalByDescentProbability(1, 0, 0);
     map<string, vector<string> > locusToSuspectAlleles;
     map<string, set<string> > locusToAssumedAlleles;
@@ -144,7 +144,7 @@ map<Race, vector<double> > run(const string& executablePath, const string& input
             if (row.size() <= 1) continue;
             // Currently only expect one race or ALL. Change this to vector if multiple races
             // are needed but not all.
-            race = raceFromString(row[1]);
+            race = row[1];
         } else if (header == "IBD Probs") {
             if (row.size() <= 3 || row[1].size() == 0 ||
                     row[2].size() == 0 || row[3].size() == 0 ) continue;
@@ -185,11 +185,37 @@ map<Race, vector<double> > run(const string& executablePath, const string& input
         }
     }
 
+    // Check for loci where there is a suspect allele, and the assumed and unattributed
+    // rows are present (but possibly empty).
+    set<string> lociToRun;
+    for (map<string, vector<string> >::const_iterator iter = locusToSuspectAlleles.begin();
+            iter != locusToSuspectAlleles.end(); iter++) {
+        const string& locus = iter->first;
+        if (locusToAssumedAlleles.find(locus) != locusToAssumedAlleles.end() &&
+                locusToUnattributedAlleles.find(locus) != locusToUnattributedAlleles.end()) {
+            lociToRun.insert(locus);
+        }
+    }
+
+    string alleleFrequencyTablePath = executablePath + "Allele Frequency Tables/";
     vector<Race> races;
     // Determine the races to run.
-    if (race == ALL) {
-        for (int r = (int) RACE_START; r < (int) RACE_END; r += 1) {
-            races.push_back((Race) r);
+    if (race == ALL_RACE) {
+        set<Race> allRaces;
+        for (set<string>::const_iterator iter = lociToRun.begin();
+                iter != lociToRun.end(); iter++) {
+            string locus = *iter;
+            map<Race, map<string, unsigned int> > raceToAlleleCounts = getAlleleCountsFromFile(
+                    alleleFrequencyTablePath + locus + "_B.count.csv");
+            for (map<Race, map<string, unsigned int> >::const_iterator race_iter =
+                    raceToAlleleCounts.begin();
+                 race_iter != raceToAlleleCounts.end();
+                 race_iter++) {
+                allRaces.insert(race_iter->first);
+            }
+        }
+        for (set<Race>::const_iterator iter = allRaces.begin(); iter != allRaces.end(); iter++) {
+            races.push_back(*iter);
         }
     } else {
         races.push_back(race);
@@ -205,19 +231,6 @@ map<Race, vector<double> > run(const string& executablePath, const string& input
         raceToSolverIndexToLocusLogProb.insert(
                 pair<Race, vector<map<string, double> > >(r,
                         vector<map<string, double> >(likelihoodSolvers.size())));
-    }
-
-
-    // Check for loci where there is a suspect allele, and the assumed and unattributed
-	// rows are present (but possibly empty).
-    set<string> lociToRun;
-    for (map<string, vector<string> >::const_iterator iter = locusToSuspectAlleles.begin();
-            iter != locusToSuspectAlleles.end(); iter++) {
-        const string& locus = iter->first;
-        if (locusToAssumedAlleles.find(locus) != locusToAssumedAlleles.end() &&
-                locusToUnattributedAlleles.find(locus) != locusToUnattributedAlleles.end()) {
-            lociToRun.insert(locus);
-        }
     }
 
     // Create configurations and run on likelihood solvers.
@@ -255,8 +268,7 @@ map<Race, vector<double> > run(const string& executablePath, const string& input
         }
 
         map<Race, map<string, unsigned int> > raceToAlleleCounts =
-                getAlleleCountsFromFile(executablePath + "Allele Frequency Tables/" + locus + "_B.count.csv",
-                        races);
+                getAlleleCountsFromFile(alleleFrequencyTablePath + locus + "_B.count.csv");
 
         for (unsigned int raceIndex = 0; raceIndex < races.size(); raceIndex++) {
             Race curRace = races[raceIndex];

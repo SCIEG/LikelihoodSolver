@@ -22,6 +22,7 @@
 using namespace std;
 
 namespace LabRetriever {
+    const Race ALL_RACE = "ALL";
 
     // trim from start
     static inline string &ltrim(string &s) {
@@ -40,79 +41,22 @@ namespace LabRetriever {
             return ltrim(rtrim(s));
     }
 
-    Race raceFromString(const string& name) {
-        if (name == "AFRICAN_AMERICAN") {
-            return AFRICAN_AMERICAN;
-        } else if (name == "CAUCASIAN") {
-            return CAUCASIAN;
-        } else if (name == "HISPANIC") {
-            return HISPANIC;
-        } else if (name == "ALL") {
-            return ALL;
-        } else if (name == "ASIAN") {
-            return ASIAN;
-        } else
-        // TODO: fix default
-        return ALL;
-    }
-
-    string stringFromRace(Race race) {
-        switch (race) {
-            case AFRICAN_AMERICAN:
-                return "AFRICAN_AMERICAN";
-            case CAUCASIAN:
-                return "CAUCASIAN";
-            case HISPANIC:
-                return "HISPANIC";
-            case ASIAN:
-                return "ASIAN";
-            // TODO: fix default -- 'ALL' shouldn't ever appear
-            case ALL:
-            default:
-                return "ALL";
-        }
-    }
-
     // TODO: optimize for 'ALL' case
-    map<Race, map<string, unsigned int> > getAlleleCountsFromFile(const string& fileName,
-            vector<Race> races) {
+    map<Race, map<string, unsigned int> > getAlleleCountsFromFile(const string& fileName) {
         map<Race, map<string, unsigned int> > retVal;
-//        ifstream file;
-//        file.open(fileName.c_str());
-
-//        string line;
-
-        // Chomp the first line to get read of headers.
-//        getline(file, line);
-//        while (file.good()) {
-//            unsigned int val;
-//            getline(file, line);
-//            if (line.size() == 0) break;
-//            vector<string> tokenList = makeTokenList(line);
-//            istringstream(tokenList[(int) race]) >> val;
-//            retVal[tokenList[0]] = val;
-//        }
-
-//        file.close();
-
         vector< vector<string> > rawCsv = readRawCsv(fileName);
 
-        // Read header data to figure out the columns.
+        // The header, starting at column 1, lists the races which the frequency tables are for.
         vector<string> header = rawCsv[0];
-        map<Race, unsigned int> raceToColNum;
-        // Skip the first column, which is 'Allele'
-        for (unsigned int headerIndex = 1; headerIndex < header.size(); headerIndex++) {
-            raceToColNum[raceFromString(header[headerIndex])] = headerIndex;
-        }
 
         for (unsigned int rowNum = 1; rowNum < rawCsv.size(); rowNum++) {
             vector<string> row = rawCsv[rowNum];
             string allele = row[0];
 
-            for (unsigned int i = 0; i < races.size(); i++) {
-                Race race = races[i];
+            for (unsigned int colNum = 1; colNum < row.size(); colNum++) {
+                Race race = header[colNum];
                 unsigned int val;
-                istringstream(row[raceToColNum[race]]) >> val;
+                istringstream(row[colNum]) >> val;
                 retVal[race][allele] = val;
             }
         }
