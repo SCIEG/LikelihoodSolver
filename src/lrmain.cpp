@@ -117,6 +117,7 @@ map<Race, vector<double> > run(const string& executablePath, const string& input
     for (; csvIndex < inputData.size(); csvIndex++) {
         const vector<string>& row = inputData[csvIndex];
         if (row.size() == 0) continue;
+        errno = 0;
         char* endPtr;
 
         const string& header = row[0];
