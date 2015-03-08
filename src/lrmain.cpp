@@ -109,7 +109,7 @@ map<Race, vector<double> > run(const string& executablePath, const string& input
     Race race = ALL_RACE;
     IdenticalByDescentProbability identicalByDescentProbability(1, 0, 0);
     map<string, vector<string> > locusToSuspectAlleles;
-    map<string, set<string> > locusToAssumedAlleles;
+    map<string, vector<set<string> > > locusToAssumedAlleles;
     map<string, vector<set<string> > > locusToUnattributedAlleles;
 
     vector< vector<string> > inputData = readRawCsv(inputFileName);
@@ -175,7 +175,7 @@ map<Race, vector<double> > run(const string& executablePath, const string& input
                 }
             }
             if (locusType == "Assumed") {
-                locusToAssumedAlleles[locus] = alleleSet;
+                locusToAssumedAlleles[locus].push_back(alleleSet);
             } else if (locusType == "Unattributed") {
                 locusToUnattributedAlleles[locus].push_back(alleleSet);
             } else if (locusType == "Suspected") {
@@ -196,6 +196,17 @@ map<Race, vector<double> > run(const string& executablePath, const string& input
                 locusToUnattributedAlleles.find(locus) != locusToUnattributedAlleles.end()) {
             lociToRun.insert(locus);
         }
+    }
+
+    // If the number of Assumed and Unattributed cases don't match, extend one of them to match the
+    // other.
+    for (set<string>::const_iterator iter = lociToRun.begin(); iter != lociToRun.end(); iter++) {
+        string allele = *iter;
+        vector<set<string> >& assumedAlleles = locusToAssumedAlleles[allele];
+        vector<set<string> >& unattributedAlleles = locusToUnattributedAlleles[allele];
+        int len = max(assumedAlleles.size(), unattributedAlleles.size());
+        assumedAlleles.resize(len);
+        unattributedAlleles.resize(len);
     }
 
     string alleleFrequencyTablePath = executablePath + "Allele Frequency Tables/";
@@ -240,14 +251,16 @@ map<Race, vector<double> > run(const string& executablePath, const string& input
         string locus = *iter;
 
         vector<set<string> > unattributedAlleles = locusToUnattributedAlleles[locus];
-        set<string> assumedAlleles = locusToAssumedAlleles[locus];
+        vector<set<string> > assumedAlleles = locusToAssumedAlleles[locus];
         vector<string> suspectAlleles = locusToSuspectAlleles[locus];
 
         set<string> allAlleles;
-        allAlleles.insert(assumedAlleles.begin(), assumedAlleles.end());
         allAlleles.insert(suspectAlleles.begin(), suspectAlleles.end());
         for (unsigned int i = 0; i < unattributedAlleles.size(); i++) {
             allAlleles.insert(unattributedAlleles[i].begin(), unattributedAlleles[i].end());
+        }
+        for (unsigned int i = 0; i < assumedAlleles.size(); i++) {
+            allAlleles.insert(assumedAlleles[i].begin(), assumedAlleles[i].end());
         }
 
         AlleleProfile suspectProfile;
@@ -262,10 +275,10 @@ map<Race, vector<double> > run(const string& executablePath, const string& input
         for (unsigned int i = 0; i < suspectAlleles.size(); i++) {
             suspectProfile.addAllele(suspectAlleles[i]);
         }
-        for (unsigned int unattribIndex = 0; unattribIndex < unattributedAlleles.size();
-                unattribIndex++) {
+        for (unsigned int index = 0; index < unattributedAlleles.size();
+                index++) {
             replicateDatas.push_back(ReplicateData::fromUnattributedAndMaskedAlleles(
-                    unattributedAlleles[unattribIndex], assumedAlleles));
+                    unattributedAlleles[index], assumedAlleles[index]));
         }
 
         map<Race, map<string, unsigned int> > raceToAlleleCounts =
