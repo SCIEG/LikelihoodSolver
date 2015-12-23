@@ -99,6 +99,14 @@ void outputData(const set<string>& lociToRun, const vector<LikelihoodSolver*>& l
     myFileStream.close();
 }
 
+namespace {
+bool ToDouble(const string& input, double* output) {
+    char* endPtr;
+    *output = strtod(input.c_str(), &endPtr);
+    return *endPtr == '\0' && errno == 0;
+}
+}
+
 map<Race, vector<double> > run(const string& executablePath, const string& inputFileName, const string& outputFileName,
         vector<LikelihoodSolver*> likelihoodSolvers) {
     // These are defaults; if specified, will be in the input file.
@@ -111,6 +119,8 @@ map<Race, vector<double> > run(const string& executablePath, const string& input
     map<string, vector<string> > locusToSuspectAlleles;
     map<string, vector<set<string> > > locusToAssumedAlleles;
     map<string, vector<set<string> > > locusToUnattributedAlleles;
+    map<string, double> locusSpecificDropout;
+    map<string, double> locusSpecificDropin;
 
     vector< vector<string> > inputData = readRawCsv(inputFileName);
     unsigned int csvIndex = 0;
@@ -165,6 +175,16 @@ map<Race, vector<double> > run(const string& executablePath, const string& input
             if (index == string::npos) continue;
             string locus = header.substr(0, index);
             string locusType = header.substr(index+1, header.size());
+            if (locusType == "Drop-in" || locusType == "Drop-out") {
+                double value;
+                if (!ToDouble(row[1], &value)) continue;
+                if (locusType == "Drop-in") {
+                    locusSpecificDropin[locus] = value;
+                } else if (locusType == "Drop-out") {
+                    locusSpecificDropout[locus] = value;
+                }
+                continue;
+            }
             set<string> alleleSet;
             vector<string> alleles;
             for (unsigned int i = 1; i < row.size(); i++) {
@@ -302,7 +322,11 @@ map<Race, vector<double> > run(const string& executablePath, const string& input
                     getAlleleProportionsFromCounts(alleleCounts, suspectProfile, fst);
 
             Configuration config(suspectProfile, replicateDatas, alleleProp,
-                    identicalByDescentProbability, dropoutRate, dropinRate, alpha);
+                    identicalByDescentProbability,
+                    locusSpecificDropout.count(locus) == 0 ?
+                            dropoutRate : locusSpecificDropout[locus],
+                    locusSpecificDropin.count(locus) == 0 ? dropinRate : locusSpecificDropin[locus],
+                    alpha);
 
             for (unsigned int solverIndex = 0; solverIndex < likelihoodSolvers.size();
                     solverIndex++) {
@@ -324,8 +348,8 @@ int main(int argc, char *argv[]) {
     vector<LikelihoodSolver*> solversToUse;
 
     if (argc < 2) {
-        std::cout << "Usage is <inputfile> <outputfile> [<[01][0123]>, ...]\n";
-        std::cout << "first digit is number of suspects, second is number of unknowns.\n";
+        std::cout << "Usage is <inputfile> <outputfile> [<[su][0123]>, ...]\n";
+        std::cout << "first character is with [s]uspect or [u]nknowns only, second is number of unknowns.\n";
         std::cout << "\nexample: for no suspect, one unknown and one suspect, one unknown\n";
         std::cout << argv[0] << " input.csv output.csv 01 11\n\n";
         return -1;
