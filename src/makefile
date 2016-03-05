@@ -1,5 +1,5 @@
 
-all: LikelihoodSolver utils
+labr: LikelihoodSolver utils Configuration.o lrmain.cpp
 	g++ -I ../lib/boost_1_53_0 -g lrmain.cpp Configuration.o LikelihoodSolver/LikelihoodSolver.o \
 		LikelihoodSolver/CachingSolver.o \
 		LikelihoodSolver/NoSuspectFourUnknownsLikelihoodSolver.o \
@@ -12,17 +12,22 @@ all: LikelihoodSolver utils
 		LikelihoodSolver/OneSuspectTwoUnknownsLikelihoodSolver.o \
 		LikelihoodSolver/UnknownsSolver.o \
 		utils/LikelihoodUtil.o utils/FileReaderUtil.o utils/ProbabilityUtil.o \
-		-o ../target/labr
+		utils/DebugUtil.o \
+		-o labr
+	cp labr ../target/labr
 
-Configuration:
+Configuration.o: Configuration.cpp
 	g++ -g -c Configuration.cpp
 
-LikelihoodSolver: Configuration
+LikelihoodSolver: force
 	$(MAKE) -C LikelihoodSolver
 
-utils: Configuration
+utils: force
 	$(MAKE) -C utils
 
+force:
+	true
+
 clean:
-	rm -rf *.o */*.o ../target/labr*
+	rm -rf *.o */*.o labr ../target/labr*
 
