@@ -17,28 +17,11 @@
 using namespace std;
 
 namespace LabRetriever {
-    /*
-     * Temporary indexing until frequency table formats are finalized.
-     */
-    enum Race {
-        ALL = -1,
-        RACE_START = 1,
-        AFRICAN_AMERICAN = 1,
-        CAUCASIAN,
-        HISPANIC,
-        RACE_END,
-		// TODO: move this in the middle when ASIAN data gets added to table, or
-		// indexing table gets fixed.
-		ASIAN
-    };
-
-    Race raceFromString(const string& name);
-
-    string stringFromRace(Race race);
+    typedef string Race;
+    extern const Race ALL_RACE;
 
     // TODO: Change name?
-    map<Race, map<string, unsigned int> > getAlleleCountsFromFile(const string& fileName,
-                vector<Race> races);
+    map<Race, map<string, unsigned int> > getAlleleCountsFromFile(const string& fileName);
 
     vector< vector<string> > readRawCsv(const string& fileName);
 

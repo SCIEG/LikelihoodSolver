@@ -31,7 +31,7 @@ void outputData(const set<string>& lociToRun, const vector<LikelihoodSolver*>& l
                 raceToSolverIndexToLogProb.find(curRace)->second;
 
         // Output race
-        outputStringStream << stringFromRace(curRace) << endl;
+        outputStringStream << curRace << endl;
 
         // Output probability header
         outputStringStream << "Probabilities, total";
@@ -99,6 +99,14 @@ void outputData(const set<string>& lociToRun, const vector<LikelihoodSolver*>& l
     myFileStream.close();
 }
 
+namespace {
+bool ToDouble(const string& input, double* output) {
+    char* endPtr;
+    *output = strtod(input.c_str(), &endPtr);
+    return *endPtr == '\0' && errno == 0;
+}
+}
+
 map<Race, vector<double> > run(const string& executablePath, const string& inputFileName, const string& outputFileName,
         vector<LikelihoodSolver*> likelihoodSolvers) {
     // These are defaults; if specified, will be in the input file.
@@ -106,17 +114,20 @@ map<Race, vector<double> > run(const string& executablePath, const string& input
     double dropinRate = 0.01;
     double dropoutRate = 0.01;
     double fst = 0.01;
-    Race race = ALL;
+    Race race = ALL_RACE;
     IdenticalByDescentProbability identicalByDescentProbability(1, 0, 0);
     map<string, vector<string> > locusToSuspectAlleles;
-    map<string, set<string> > locusToAssumedAlleles;
+    map<string, vector<set<string> > > locusToAssumedAlleles;
     map<string, vector<set<string> > > locusToUnattributedAlleles;
+    map<string, double> locusSpecificDropout;
+    map<string, double> locusSpecificDropin;
 
     vector< vector<string> > inputData = readRawCsv(inputFileName);
     unsigned int csvIndex = 0;
     for (; csvIndex < inputData.size(); csvIndex++) {
         const vector<string>& row = inputData[csvIndex];
         if (row.size() == 0) continue;
+        errno = 0;
         char* endPtr;
 
         const string& header = row[0];
@@ -144,7 +155,7 @@ map<Race, vector<double> > run(const string& executablePath, const string& input
             if (row.size() <= 1) continue;
             // Currently only expect one race or ALL. Change this to vector if multiple races
             // are needed but not all.
-            race = raceFromString(row[1]);
+            race = row[1];
         } else if (header == "IBD Probs") {
             if (row.size() <= 3 || row[1].size() == 0 ||
                     row[2].size() == 0 || row[3].size() == 0 ) continue;
@@ -164,6 +175,16 @@ map<Race, vector<double> > run(const string& executablePath, const string& input
             if (index == string::npos) continue;
             string locus = header.substr(0, index);
             string locusType = header.substr(index+1, header.size());
+            if (locusType == "Drop-in" || locusType == "Drop-out") {
+                double value;
+                if (!ToDouble(row[1], &value)) continue;
+                if (locusType == "Drop-in") {
+                    locusSpecificDropin[locus] = value;
+                } else if (locusType == "Drop-out") {
+                    locusSpecificDropout[locus] = value;
+                }
+                continue;
+            }
             set<string> alleleSet;
             vector<string> alleles;
             for (unsigned int i = 1; i < row.size(); i++) {
@@ -174,7 +195,7 @@ map<Race, vector<double> > run(const string& executablePath, const string& input
                 }
             }
             if (locusType == "Assumed") {
-                locusToAssumedAlleles[locus] = alleleSet;
+                locusToAssumedAlleles[locus].push_back(alleleSet);
             } else if (locusType == "Unattributed") {
                 locusToUnattributedAlleles[locus].push_back(alleleSet);
             } else if (locusType == "Suspected") {
@@ -185,11 +206,48 @@ map<Race, vector<double> > run(const string& executablePath, const string& input
         }
     }
 
+    // Check for loci where there is a suspect allele, and the assumed and unattributed
+    // rows are present (but possibly empty).
+    set<string> lociToRun;
+    for (map<string, vector<string> >::const_iterator iter = locusToSuspectAlleles.begin();
+            iter != locusToSuspectAlleles.end(); iter++) {
+        const string& locus = iter->first;
+        if (locusToAssumedAlleles.find(locus) != locusToAssumedAlleles.end() &&
+                locusToUnattributedAlleles.find(locus) != locusToUnattributedAlleles.end()) {
+            lociToRun.insert(locus);
+        }
+    }
+
+    // If the number of Assumed and Unattributed cases don't match, extend one of them to match the
+    // other.
+    for (set<string>::const_iterator iter = lociToRun.begin(); iter != lociToRun.end(); iter++) {
+        string allele = *iter;
+        vector<set<string> >& assumedAlleles = locusToAssumedAlleles[allele];
+        vector<set<string> >& unattributedAlleles = locusToUnattributedAlleles[allele];
+        int len = max(assumedAlleles.size(), unattributedAlleles.size());
+        assumedAlleles.resize(len);
+        unattributedAlleles.resize(len);
+    }
+
+    string alleleFrequencyTablePath = executablePath + "Allele Frequency Tables/";
     vector<Race> races;
     // Determine the races to run.
-    if (race == ALL) {
-        for (int r = (int) RACE_START; r < (int) RACE_END; r += 1) {
-            races.push_back((Race) r);
+    if (race == ALL_RACE) {
+        set<Race> allRaces;
+        for (set<string>::const_iterator iter = lociToRun.begin();
+                iter != lociToRun.end(); iter++) {
+            string locus = *iter;
+            map<Race, map<string, unsigned int> > raceToAlleleCounts = getAlleleCountsFromFile(
+                    alleleFrequencyTablePath + locus + "_B.count.csv");
+            for (map<Race, map<string, unsigned int> >::const_iterator race_iter =
+                    raceToAlleleCounts.begin();
+                 race_iter != raceToAlleleCounts.end();
+                 race_iter++) {
+                allRaces.insert(race_iter->first);
+            }
+        }
+        for (set<Race>::const_iterator iter = allRaces.begin(); iter != allRaces.end(); iter++) {
+            races.push_back(*iter);
         }
     } else {
         races.push_back(race);
@@ -207,33 +265,22 @@ map<Race, vector<double> > run(const string& executablePath, const string& input
                         vector<map<string, double> >(likelihoodSolvers.size())));
     }
 
-
-    // Check for loci where there is a suspect allele, and the assumed and unattributed
-	// rows are present (but possibly empty).
-    set<string> lociToRun;
-    for (map<string, vector<string> >::const_iterator iter = locusToSuspectAlleles.begin();
-            iter != locusToSuspectAlleles.end(); iter++) {
-        const string& locus = iter->first;
-        if (locusToAssumedAlleles.find(locus) != locusToAssumedAlleles.end() &&
-                locusToUnattributedAlleles.find(locus) != locusToUnattributedAlleles.end()) {
-            lociToRun.insert(locus);
-        }
-    }
-
     // Create configurations and run on likelihood solvers.
     for (set<string>::const_iterator iter = lociToRun.begin();
             iter != lociToRun.end(); iter++) {
         string locus = *iter;
 
         vector<set<string> > unattributedAlleles = locusToUnattributedAlleles[locus];
-        set<string> assumedAlleles = locusToAssumedAlleles[locus];
+        vector<set<string> > assumedAlleles = locusToAssumedAlleles[locus];
         vector<string> suspectAlleles = locusToSuspectAlleles[locus];
 
         set<string> allAlleles;
-        allAlleles.insert(assumedAlleles.begin(), assumedAlleles.end());
         allAlleles.insert(suspectAlleles.begin(), suspectAlleles.end());
         for (unsigned int i = 0; i < unattributedAlleles.size(); i++) {
             allAlleles.insert(unattributedAlleles[i].begin(), unattributedAlleles[i].end());
+        }
+        for (unsigned int i = 0; i < assumedAlleles.size(); i++) {
+            allAlleles.insert(assumedAlleles[i].begin(), assumedAlleles[i].end());
         }
 
         AlleleProfile suspectProfile;
@@ -248,15 +295,14 @@ map<Race, vector<double> > run(const string& executablePath, const string& input
         for (unsigned int i = 0; i < suspectAlleles.size(); i++) {
             suspectProfile.addAllele(suspectAlleles[i]);
         }
-        for (unsigned int unattribIndex = 0; unattribIndex < unattributedAlleles.size();
-                unattribIndex++) {
+        for (unsigned int index = 0; index < unattributedAlleles.size();
+                index++) {
             replicateDatas.push_back(ReplicateData::fromUnattributedAndMaskedAlleles(
-                    unattributedAlleles[unattribIndex], assumedAlleles));
+                    unattributedAlleles[index], assumedAlleles[index]));
         }
 
         map<Race, map<string, unsigned int> > raceToAlleleCounts =
-                getAlleleCountsFromFile(executablePath + "Allele Frequency Tables/" + locus + "_B.count.csv",
-                        races);
+                getAlleleCountsFromFile(alleleFrequencyTablePath + locus + "_B.count.csv");
 
         for (unsigned int raceIndex = 0; raceIndex < races.size(); raceIndex++) {
             Race curRace = races[raceIndex];
@@ -276,7 +322,11 @@ map<Race, vector<double> > run(const string& executablePath, const string& input
                     getAlleleProportionsFromCounts(alleleCounts, suspectProfile, fst);
 
             Configuration config(suspectProfile, replicateDatas, alleleProp,
-                    identicalByDescentProbability, dropoutRate, dropinRate, alpha);
+                    identicalByDescentProbability,
+                    locusSpecificDropout.count(locus) == 0 ?
+                            dropoutRate : locusSpecificDropout[locus],
+                    locusSpecificDropin.count(locus) == 0 ? dropinRate : locusSpecificDropin[locus],
+                    alpha);
 
             for (unsigned int solverIndex = 0; solverIndex < likelihoodSolvers.size();
                     solverIndex++) {
@@ -298,8 +348,8 @@ int main(int argc, char *argv[]) {
     vector<LikelihoodSolver*> solversToUse;
 
     if (argc < 2) {
-        std::cout << "Usage is <inputfile> <outputfile> [<[01][0123]>, ...]\n";
-        std::cout << "first digit is number of suspects, second is number of unknowns.\n";
+        std::cout << "Usage is <inputfile> <outputfile> [<[su][0123]>, ...]\n";
+        std::cout << "first character is with [s]uspect or [u]nknowns only, second is number of unknowns.\n";
         std::cout << "\nexample: for no suspect, one unknown and one suspect, one unknown\n";
         std::cout << argv[0] << " input.csv output.csv 01 11\n\n";
         return -1;
