@@ -31,6 +31,16 @@ void outputData(const set<string>& lociToCheck, const vector<LikelihoodSolver*>&
         const map<Race, vector<double> >& raceToSolverIndexToLogProb,
         const vector<Race> races,
         const string& outputFileName);
+        
+void RetrieveDataFromCSV(const string& inputFileName, double* alpha, double* dropinRate,
+                         double* dropoutRate, double* fst, Race* race,
+                         IdenticalByDescentProbability* identicalByDescentProbability,
+                         map<string, vector<string> >* locusToSuspectAlleles,
+                         map<string, vector<set<string> > >* locusToAssumedAlleles,
+                         map<string, vector<set<string> > >* locusToUnattributedAlleles,
+                         map<string, double>* locusSpecificDropout,
+                         map<string, double>* locusSpecificDropin,
+                         set<string>* lociToRun);
 
 map<Race, vector<double> > run(const string& inputFileName, const string& outputFileName,
         vector<LikelihoodSolver*> likelihoodSolvers);

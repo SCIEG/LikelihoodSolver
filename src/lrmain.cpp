@@ -107,6 +107,122 @@ bool ToDouble(const string& input, double* output) {
 }
 }
 
+void RetrieveDataFromCSV(const string& inputFileName, double* alpha, double* dropinRate,
+                         double* dropoutRate, double* fst, Race* race,
+                         IdenticalByDescentProbability* identicalByDescentProbability,
+                         map<string, vector<string> >* locusToSuspectAlleles,
+                         map<string, vector<set<string> > >* locusToAssumedAlleles,
+                         map<string, vector<set<string> > >* locusToUnattributedAlleles,
+                         map<string, double>* locusSpecificDropout,
+                         map<string, double>* locusSpecificDropin,
+                         set<string>* lociToRun) {
+                               vector< vector<string> > inputData = readRawCsv(inputFileName);
+  unsigned int csvIndex = 0;
+  for (; csvIndex < inputData.size(); csvIndex++) {
+      const vector<string>& row = inputData[csvIndex];
+      if (row.size() == 0) continue;
+      errno = 0;
+      char* endPtr;
+
+      const string& header = row[0];
+      if (header == "alpha") {
+          if (row.size() <= 1) continue;
+          double value = strtod(row[1].c_str(), &endPtr);
+          if (*endPtr != '\0' || errno != 0) continue;
+          *alpha = value;
+      } else if (header == "Drop-in rate") {
+          if (row.size() <= 1) continue;
+          double value = strtod(row[1].c_str(), &endPtr);
+          if (*endPtr != '\0' || errno != 0) continue;
+          *dropinRate = value;
+      } else if (header == "Drop-out rate") {
+          if (row.size() <= 1) continue;
+          double value = strtod(row[1].c_str(), &endPtr);
+          if (*endPtr != '\0' || errno != 0) continue;
+          *dropoutRate = value;
+      } else if (header == "fst") {
+         if (row.size() <= 1) continue;
+         double value = strtod(row[1].c_str(), &endPtr);
+         if (*endPtr != '\0' || errno != 0) continue;
+         *fst = value;
+      } else if (header == "Race") {
+          if (row.size() <= 1) continue;
+          // Currently only expect one race or ALL. Change this to vector if multiple races
+          // are needed but not all.
+          *race = row[1];
+      } else if (header == "IBD Probs") {
+          if (row.size() <= 3 || row[1].size() == 0 ||
+                  row[2].size() == 0 || row[3].size() == 0 ) continue;
+
+          double zeroAllelesInCommonProb = strtod(row[1].c_str(), &endPtr);
+          if (*endPtr != '\0' || errno != 0) continue;
+          double oneAlleleInCommonProb = strtod(row[2].c_str(), &endPtr);
+          if (*endPtr != '\0' || errno != 0) continue;
+          double twoAllelesInCommonProb = strtod(row[3].c_str(), &endPtr);
+          if (*endPtr != '\0' || errno != 0) continue;
+
+          identicalByDescentProbability->zeroAllelesInCommonProb = zeroAllelesInCommonProb;
+          identicalByDescentProbability->oneAlleleInCommonProb = oneAlleleInCommonProb;
+          identicalByDescentProbability->bothAllelesInCommonProb = twoAllelesInCommonProb;
+      } else {
+          unsigned int index = header.find("-");
+          if (index == string::npos) continue;
+          string locus = header.substr(0, index);
+          string locusType = header.substr(index+1, header.size());
+          if (locusType == "Drop-in" || locusType == "Drop-out") {
+              double value;
+              if (!ToDouble(row[1], &value)) continue;
+              if (locusType == "Drop-in") {
+                  (*locusSpecificDropin)[locus] = value;
+              } else if (locusType == "Drop-out") {
+                  (*locusSpecificDropout)[locus] = value;
+              }
+              continue;
+          }
+          set<string> alleleSet;
+          vector<string> alleles;
+          for (unsigned int i = 1; i < row.size(); i++) {
+              string data = row[i];
+              if (data.length() != 0) {
+                  alleles.push_back(data);
+                  alleleSet.insert(data);
+              }
+          }
+          if (locusType == "Assumed") {
+              (*locusToAssumedAlleles)[locus].push_back(alleleSet);
+          } else if (locusType == "Unattributed") {
+              (*locusToUnattributedAlleles)[locus].push_back(alleleSet);
+          } else if (locusType == "Suspected") {
+              // If there are no suspected alleles, then there's no point of calculating this.
+              if (alleles.size() == 0) continue;
+              (*locusToSuspectAlleles)[locus] = alleles;
+          }
+      }
+  }
+
+  // Check for loci where there is a suspect allele, and the assumed and unattributed
+  // rows are present (but possibly empty).
+  for (map<string, vector<string> >::const_iterator iter = locusToSuspectAlleles->begin();
+          iter != locusToSuspectAlleles->end(); iter++) {
+      const string& locus = iter->first;
+      if (locusToAssumedAlleles->find(locus) != locusToAssumedAlleles->end() &&
+              locusToUnattributedAlleles->find(locus) != locusToUnattributedAlleles->end()) {
+          lociToRun->insert(locus);
+      }
+  }
+
+  // If the number of Assumed and Unattributed cases don't match, extend one of them to match the
+  // other.
+  for (set<string>::const_iterator iter = lociToRun->begin(); iter != lociToRun->end(); iter++) {
+      string allele = *iter;
+      vector<set<string> >& assumedAlleles = (*locusToAssumedAlleles)[allele];
+      vector<set<string> >& unattributedAlleles = (*locusToUnattributedAlleles)[allele];
+      int len = max(assumedAlleles.size(), unattributedAlleles.size());
+      assumedAlleles.resize(len);
+      unattributedAlleles.resize(len);
+  }
+}
+
 map<Race, vector<double> > run(const string& executablePath, const string& inputFileName, const string& outputFileName,
         vector<LikelihoodSolver*> likelihoodSolvers) {
     // These are defaults; if specified, will be in the input file.
@@ -122,112 +238,12 @@ map<Race, vector<double> > run(const string& executablePath, const string& input
     map<string, double> locusSpecificDropout;
     map<string, double> locusSpecificDropin;
 
-    vector< vector<string> > inputData = readRawCsv(inputFileName);
-    unsigned int csvIndex = 0;
-    for (; csvIndex < inputData.size(); csvIndex++) {
-        const vector<string>& row = inputData[csvIndex];
-        if (row.size() == 0) continue;
-        errno = 0;
-        char* endPtr;
-
-        const string& header = row[0];
-        if (header == "alpha") {
-            if (row.size() <= 1) continue;
-            double value = strtod(row[1].c_str(), &endPtr);
-            if (*endPtr != '\0' || errno != 0) continue;
-            alpha = value;
-        } else if (header == "Drop-in rate") {
-            if (row.size() <= 1) continue;
-            double value = strtod(row[1].c_str(), &endPtr);
-            if (*endPtr != '\0' || errno != 0) continue;
-            dropinRate = value;
-        } else if (header == "Drop-out rate") {
-            if (row.size() <= 1) continue;
-            double value = strtod(row[1].c_str(), &endPtr);
-            if (*endPtr != '\0' || errno != 0) continue;
-            dropoutRate = value;
-        } else if (header == "fst") {
-           if (row.size() <= 1) continue;
-           double value = strtod(row[1].c_str(), &endPtr);
-           if (*endPtr != '\0' || errno != 0) continue;
-           fst = value;
-        } else if (header == "Race") {
-            if (row.size() <= 1) continue;
-            // Currently only expect one race or ALL. Change this to vector if multiple races
-            // are needed but not all.
-            race = row[1];
-        } else if (header == "IBD Probs") {
-            if (row.size() <= 3 || row[1].size() == 0 ||
-                    row[2].size() == 0 || row[3].size() == 0 ) continue;
-
-            double zeroAllelesInCommonProb = strtod(row[1].c_str(), &endPtr);
-            if (*endPtr != '\0' || errno != 0) continue;
-            double oneAlleleInCommonProb = strtod(row[2].c_str(), &endPtr);
-            if (*endPtr != '\0' || errno != 0) continue;
-            double twoAllelesInCommonProb = strtod(row[3].c_str(), &endPtr);
-            if (*endPtr != '\0' || errno != 0) continue;
-
-            identicalByDescentProbability.zeroAllelesInCommonProb = zeroAllelesInCommonProb;
-            identicalByDescentProbability.oneAlleleInCommonProb = oneAlleleInCommonProb;
-            identicalByDescentProbability.bothAllelesInCommonProb = twoAllelesInCommonProb;
-        } else {
-            unsigned int index = header.find("-");
-            if (index == string::npos) continue;
-            string locus = header.substr(0, index);
-            string locusType = header.substr(index+1, header.size());
-            if (locusType == "Drop-in" || locusType == "Drop-out") {
-                double value;
-                if (!ToDouble(row[1], &value)) continue;
-                if (locusType == "Drop-in") {
-                    locusSpecificDropin[locus] = value;
-                } else if (locusType == "Drop-out") {
-                    locusSpecificDropout[locus] = value;
-                }
-                continue;
-            }
-            set<string> alleleSet;
-            vector<string> alleles;
-            for (unsigned int i = 1; i < row.size(); i++) {
-                string data = row[i];
-                if (data.length() != 0) {
-                    alleles.push_back(data);
-                    alleleSet.insert(data);
-                }
-            }
-            if (locusType == "Assumed") {
-                locusToAssumedAlleles[locus].push_back(alleleSet);
-            } else if (locusType == "Unattributed") {
-                locusToUnattributedAlleles[locus].push_back(alleleSet);
-            } else if (locusType == "Suspected") {
-                // If there are no suspected alleles, then there's no point of calculating this.
-                if (alleles.size() == 0) continue;
-                locusToSuspectAlleles[locus] = alleles;
-            }
-        }
-    }
-
-    // Check for loci where there is a suspect allele, and the assumed and unattributed
-    // rows are present (but possibly empty).
     set<string> lociToRun;
-    for (map<string, vector<string> >::const_iterator iter = locusToSuspectAlleles.begin();
-            iter != locusToSuspectAlleles.end(); iter++) {
-        const string& locus = iter->first;
-        if (locusToAssumedAlleles.find(locus) != locusToAssumedAlleles.end() &&
-                locusToUnattributedAlleles.find(locus) != locusToUnattributedAlleles.end()) {
-            lociToRun.insert(locus);
-        }
-    }
 
-    // If the number of Assumed and Unattributed cases don't match, extend one of them to match the
-    // other.
-    for (set<string>::const_iterator iter = lociToRun.begin(); iter != lociToRun.end(); iter++) {
-        string allele = *iter;
-        vector<set<string> >& assumedAlleles = locusToAssumedAlleles[allele];
-        vector<set<string> >& unattributedAlleles = locusToUnattributedAlleles[allele];
-        int len = max(assumedAlleles.size(), unattributedAlleles.size());
-        assumedAlleles.resize(len);
-        unattributedAlleles.resize(len);
-    }
+    RetrieveDataFromCSV(inputFileName, &alpha, &dropinRate, &dropoutRate, &fst, &race,
+                        &identicalByDescentProbability, &locusToSuspectAlleles,
+                        &locusToAssumedAlleles, &locusToUnattributedAlleles,
+                        &locusSpecificDropout, &locusSpecificDropin, &lociToRun);
 
     string alleleFrequencyTablePath = executablePath + "Allele Frequency Tables/";
     vector<Race> races;
