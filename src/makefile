@@ -15,7 +15,7 @@ labr: LikelihoodSolver utils Configuration.o lrmain.cpp
 		LikelihoodSolver/OneSuspectTwoUnknownsLikelihoodSolver.o \
 		LikelihoodSolver/UnknownsSolver.o \
 		utils/LikelihoodUtil.o utils/FileReaderUtil.o utils/ProbabilityUtil.o \
-		utils/DebugUtil.o \
+		utils/DebugUtil.o utils/InputParserUtil.o \
 		-o labr
 
 Configuration.o: Configuration.cpp
