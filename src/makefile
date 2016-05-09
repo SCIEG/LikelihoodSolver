@@ -1,4 +1,7 @@
 
+copy-labr: labr
+	cp labr ../target/labr
+
 labr: LikelihoodSolver utils Configuration.o lrmain.cpp
 	g++ -I ../lib/boost_1_53_0 -g lrmain.cpp Configuration.o LikelihoodSolver/LikelihoodSolver.o \
 		LikelihoodSolver/CachingSolver.o \
@@ -14,7 +17,6 @@ labr: LikelihoodSolver utils Configuration.o lrmain.cpp
 		utils/LikelihoodUtil.o utils/FileReaderUtil.o utils/ProbabilityUtil.o \
 		utils/DebugUtil.o \
 		-o labr
-	cp labr ../target/labr
 
 Configuration.o: Configuration.cpp
 	g++ -g -c Configuration.cpp

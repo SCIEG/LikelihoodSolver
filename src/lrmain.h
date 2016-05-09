@@ -31,7 +31,10 @@ void outputData(const set<string>& lociToCheck, const vector<LikelihoodSolver*>&
         const map<Race, vector<double> >& raceToSolverIndexToLogProb,
         const vector<Race> races,
         const string& outputFileName);
-        
+
+vector<Race> GetRaces(const Race& race, const string& alleleFrequencyTablePath,
+		      const set<string>& lociToRun);
+
 void RetrieveDataFromCSV(const string& inputFileName, double* alpha, double* dropinRate,
                          double* dropoutRate, double* fst, Race* race,
                          IdenticalByDescentProbability* identicalByDescentProbability,
@@ -41,6 +44,16 @@ void RetrieveDataFromCSV(const string& inputFileName, double* alpha, double* dro
                          map<string, double>* locusSpecificDropout,
                          map<string, double>* locusSpecificDropin,
                          set<string>* lociToRun);
+
+Configuration CreateConfiguration(
+  const string& alleleFrequencyTablePath,
+    const string& locus, const Race& race, double alpha, double dropinRate, double dropoutRate,
+    double fst, const IdenticalByDescentProbability& identicalByDescentProbability,
+    const map<string, vector<string> >& locusToSuspectAlleles,
+    const map<string, vector<set<string> > >& locusToAssumedAlleles,
+    const map<string, vector<set<string> > >& locusToUnattributedAlleles,
+    const map<string, double>& locusSpecificDropout,
+    const map<string, double>& locusSpecificDropin);
 
 map<Race, vector<double> > run(const string& inputFileName, const string& outputFileName,
         vector<LikelihoodSolver*> likelihoodSolvers);
