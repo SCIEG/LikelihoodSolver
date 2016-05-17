@@ -11,10 +11,35 @@
 
 #include <cstdlib>
 
-#include "ProbabilityUtil.h"
 #include "StringUtil.h"
 
 namespace LabRetriever {
+
+vector<Race> GetRaces(const Race& race, const string& alleleFrequencyTablePath,
+                      const set<string>& lociToRun) {
+    vector<Race> races;
+    // Determine the races to run.
+    if (race == ALL_RACE) {
+        set<Race> allRaces;
+        for (set<string>::const_iterator iter = lociToRun.begin(); iter != lociToRun.end();
+             iter++) {
+            string locus = *iter;
+            map<Race, map<string, unsigned int> > raceToAlleleCounts =
+                getAlleleCountsFromFile(alleleFrequencyTablePath + locus + "_B.count.csv");
+            for (map<Race, map<string, unsigned int> >::const_iterator race_iter =
+                     raceToAlleleCounts.begin();
+                 race_iter != raceToAlleleCounts.end(); race_iter++) {
+                allRaces.insert(race_iter->first);
+            }
+        }
+        for (set<Race>::const_iterator iter = allRaces.begin(); iter != allRaces.end(); iter++) {
+            races.push_back(*iter);
+        }
+    } else {
+        races.push_back(race);
+    }
+    return races;
+}
 
 void RetrieveDataFromCSV(const string& inputFileName, double* alpha, double* dropinRate,
                          double* dropoutRate, double* fst, Race* race,
@@ -129,48 +154,11 @@ void RetrieveDataFromCSV(const string& inputFileName, double* alpha, double* dro
     }
 }
 
-vector<Race> GetRaces(const Race& race, const string& alleleFrequencyTablePath,
-                      const set<string>& lociToRun) {
-    vector<Race> races;
-    // Determine the races to run.
-    if (race == ALL_RACE) {
-        set<Race> allRaces;
-        for (set<string>::const_iterator iter = lociToRun.begin(); iter != lociToRun.end();
-             iter++) {
-            string locus = *iter;
-            map<Race, map<string, unsigned int> > raceToAlleleCounts =
-                getAlleleCountsFromFile(alleleFrequencyTablePath + locus + "_B.count.csv");
-            for (map<Race, map<string, unsigned int> >::const_iterator race_iter =
-                     raceToAlleleCounts.begin();
-                 race_iter != raceToAlleleCounts.end(); race_iter++) {
-                allRaces.insert(race_iter->first);
-            }
-        }
-        for (set<Race>::const_iterator iter = allRaces.begin(); iter != allRaces.end(); iter++) {
-            races.push_back(*iter);
-        }
-    } else {
-        races.push_back(race);
-    }
-    return races;
-}
+namespace {
 
-Configuration CreateConfiguration(
-        const string& alleleFrequencyTablePath, const string& locus, const Race& race, double alpha,
-        double dropinRate, double dropoutRate, double fst,
-        const IdenticalByDescentProbability& identicalByDescentProbability,
-        const map<string, vector<string> >& locusToSuspectAlleles,
-        const map<string, vector<set<string> > >& locusToAssumedAlleles,
-        const map<string, vector<set<string> > >& locusToUnattributedAlleles,
-        const map<string, double>& locusSpecificDropout,
-        const map<string, double>& locusSpecificDropin) {
-    const vector<set<string> >& unattributedAlleles =
-            locusToUnattributedAlleles.find(locus)->second;
-    const vector<set<string> >& assumedAlleles = locusToAssumedAlleles.find(locus)->second;
-    const vector<string>& suspectAlleles = locusToSuspectAlleles.find(locus)->second;
-
-    // TODO: Consider building these data structures outside of this function and pass them into
-    // this function.
+set<string> AllAlleles(const vector<string>& suspectAlleles,
+                       const vector<set<string> >& assumedAlleles,
+                       const vector<set<string> >& unattributedAlleles) {
     set<string> allAlleles;
     allAlleles.insert(suspectAlleles.begin(), suspectAlleles.end());
     for (unsigned int i = 0; i < unattributedAlleles.size(); i++) {
@@ -179,49 +167,85 @@ Configuration CreateConfiguration(
     for (unsigned int i = 0; i < assumedAlleles.size(); i++) {
         allAlleles.insert(assumedAlleles[i].begin(), assumedAlleles[i].end());
     }
+    return allAlleles;
+}
 
-    AlleleProfile suspectProfile;
-    vector<ReplicateData> replicateDatas;
-
-    // If only one suspect allele is present, then assume it means that there are two of them.
-    // TODO: fix quick hack for this:
-    if (suspectAlleles.size() == 1) {
-        suspectProfile.addAllele(suspectAlleles[0]);
+/*
+ * Returns a mapping from alleles to the proportion that the allele appears in people, after
+ * sampling adjustment and the Balding-Nichols FST correction.
+ *
+ * alleleCounts - a mapping from alleles to a count of how many times that allele appeared in
+ *     the sample.
+ * suspectProfile - the current suspect's profile.
+ * samplingAdjustment -
+ * fst - See Balding-Nichols FST correction. Balding recommends that fst should be at least
+ *     0.01. It can be as high as 0.05, depending on how representative the sample population
+ *     is of the whole target population.
+ */
+map<string, double> getAlleleProportionsFromCounts(const map<string, unsigned int>& alleleCounts,
+                                                   const AlleleProfile& suspectProfile, double fst,
+                                                   unsigned int samplingAdjustment = 2) {
+    const map<string, unsigned int>& suspectAlleleCounts = suspectProfile.getAlleleCounts();
+    double totalCounts = 0, fstCorrection = (1 - fst) / (1 + fst);
+    for (map<string, unsigned int>::const_iterator iter = alleleCounts.begin();
+         iter != alleleCounts.end(); iter++) {
+        totalCounts += iter->second;
     }
 
-    for (unsigned int i = 0; i < suspectAlleles.size(); i++) {
-        suspectProfile.addAllele(suspectAlleles[i]);
-    }
-    for (unsigned int index = 0; index < unattributedAlleles.size(); index++) {
-        replicateDatas.push_back(ReplicateData::fromUnattributedAndMaskedAlleles(
-                unattributedAlleles[index], assumedAlleles[index]));
+    double totalSuspectAlleleCounts = 0;
+    for (map<string, unsigned int>::const_iterator iter = suspectAlleleCounts.begin();
+         iter != suspectAlleleCounts.end(); iter++) {
+        totalSuspectAlleleCounts += iter->second;
     }
 
+    // // Find the total counts in the alleleCounts, plus extra per suspect allele.
+    // totalCounts += totalSuspectAlleleCounts * samplingAdjustment;
+    double multiplierCorrection = fstCorrection / totalCounts;
+    map<string, double> alleleProportions;
+    for (map<string, unsigned int>::const_iterator iter = alleleCounts.begin();
+         iter != alleleCounts.end(); iter++) {
+        const string& allele = iter->first;
+        alleleProportions[allele] = iter->second * multiplierCorrection;
+    }
+
+    // For each suspect allele, add in the proportions that the adjustments would have added.
+    for (map<string, unsigned int>::const_iterator iter = suspectAlleleCounts.begin();
+         iter != suspectAlleleCounts.end(); iter++) {
+        const string& allele = iter->first;
+        unsigned int count = iter->second;
+        alleleProportions[allele] += count * (fst / (1 + fst));
+    }
+    return alleleProportions;
+}
+
+}  // namespace
+
+map<Race, map<string, double> > GetRaceToAlleleProportions(
+        const string& alleleFrequencyTableFileName, const vector<string>& suspectAlleles,
+        const vector<set<string> >& assumedAlleles, const vector<set<string> >& unattributedAlleles,
+        double fst) {
+  const set<string> allAlleles = AllAlleles(suspectAlleles, assumedAlleles, unattributedAlleles);
     map<Race, map<string, unsigned int> > raceToAlleleCounts =
-            getAlleleCountsFromFile(alleleFrequencyTablePath + locus + "_B.count.csv");
+            getAlleleCountsFromFile(alleleFrequencyTableFileName);
 
-    map<string, unsigned int> alleleCounts = raceToAlleleCounts[race];
-
-    // Edit the allele counts so that every allele is given at least 5 counts, even if the
-    // allele does not appear in the table.
-    for (set<string>::const_iterator iter = allAlleles.begin(); iter != allAlleles.end(); iter++) {
-        const string& allele = *iter;
-        if (alleleCounts.count(allele) == 0 || alleleCounts[allele] < 5) {
-            alleleCounts[allele] = 5;
+    map<Race, map<string, double> > raceToAlleleProp;
+    for (map<Race, map<string, unsigned int> >::iterator iter = raceToAlleleCounts.begin();
+         iter != raceToAlleleCounts.end(); ++iter) {
+        const Race& race = iter->first;
+        map<string, unsigned int>& alleleCounts = iter->second;
+        // Edit the allele counts so that every allele is given at least 5 counts, even if the
+        // allele does not appear in the table.
+        for (set<string>::const_iterator allele_iter = allAlleles.begin();
+             allele_iter != allAlleles.end(); allele_iter++) {
+            const string& allele = *allele_iter;
+            if (alleleCounts.count(allele) == 0 || alleleCounts[allele] < 5) {
+                alleleCounts[allele] = 5;
+            }
         }
+        raceToAlleleProp[race] =
+                getAlleleProportionsFromCounts(alleleCounts, AlleleProfile(suspectAlleles), fst);
     }
-
-    map<string, double> alleleProp =
-            getAlleleProportionsFromCounts(alleleCounts, suspectProfile, fst);
-
-    Configuration config(
-            suspectProfile, replicateDatas, alleleProp, identicalByDescentProbability,
-            locusSpecificDropout.count(locus) == 0 ? dropoutRate
-                                                   : locusSpecificDropout.find(locus)->second,
-            locusSpecificDropin.count(locus) == 0 ? dropinRate
-                                                  : locusSpecificDropin.find(locus)->second,
-            alpha);
-    return config;
+    return raceToAlleleProp;
 }
 
 }  // namespace LabRetriever

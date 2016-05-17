@@ -1,4 +1,5 @@
-all: DebugUtil.o FileReaderUtil.o LikelihoodUtil.o ProbabilityUtil.o InputParserUtil.o
+all: DebugUtil.o FileReaderUtil.o LikelihoodUtil.o ProbabilityUtil.o InputParserUtil.o \
+     StringUtil.o
 
 DebugUtil.o: DebugUtil.cpp DebugUtil.h
 	g++ -I ../../lib/boost_1_53_0 -g -c DebugUtil.cpp

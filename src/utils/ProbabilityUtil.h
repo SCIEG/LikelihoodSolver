@@ -29,22 +29,6 @@ namespace LabRetriever {
     double complementLogProbability(double logProb);
 
     /*
-     * Returns a mapping from alleles to the proportion that the allele appears in people, after
-     * sampling adjustment and the Balding-Nichols FST correction.
-     *
-     * alleleCounts - a mapping from alleles to a count of how many times that allele appeared in
-     *     the sample.
-     * suspectProfile - the current suspect's profile.
-     * samplingAdjustment -
-     * fst - See Balding-Nichols FST correction. Balding recommends that fst should be at least
-     *     0.01. It can be as high as 0.05, depending on how representative the sample population
-     *     is of the whole target population.
-     */
-    map<string, double> getAlleleProportionsFromCounts(
-            const map<string, unsigned int>& alleleCounts, const AlleleProfile& suspectProfile,
-            double fst = 0.01, unsigned int samplingAdjustment = 2);
-
-    /*
      * Calculates the probability of k alleles dropping out, given some extra data. The current
      * implementation computes it like this:
      *

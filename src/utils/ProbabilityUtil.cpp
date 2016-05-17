@@ -28,44 +28,6 @@ namespace LabRetriever {
         return log(1 - exp(logProb));
     }
 
-    map<string, double> getAlleleProportionsFromCounts(
-            const map<string, unsigned int>& alleleCounts, const AlleleProfile& suspectProfile,
-            double fst, unsigned int samplingAdjustment) {
-        const map<string, unsigned int>& suspectAlleleCounts = suspectProfile.getAlleleCounts();
-        double totalCounts = 0, fstCorrection = (1-fst) / (1+fst);
-        for (map<string, unsigned int>::const_iterator iter = alleleCounts.begin();
-                iter != alleleCounts.end(); iter++) {
-            totalCounts += iter->second;
-        }
-
-        double totalSuspectAlleleCounts = 0;
-        for (map<string, unsigned int>::const_iterator iter = suspectAlleleCounts.begin();
-                iter != suspectAlleleCounts.end(); iter++) {
-            totalSuspectAlleleCounts += iter->second;
-        }
-
-//        // Find the total counts in the alleleCounts, plus extra per suspect allele.
-//        totalCounts += totalSuspectAlleleCounts * samplingAdjustment;
-        double multiplierCorrection = fstCorrection / totalCounts;
-        map<string, double> alleleProportions;
-        for (map<string, unsigned int>::const_iterator iter = alleleCounts.begin();
-                iter != alleleCounts.end(); iter++) {
-            const string& allele = iter->first;
-            alleleProportions[allele] = iter->second * multiplierCorrection;
-        }
-
-        // For each suspect allele, add in the proportions that the adjustments would have added.
-        for (map<string, unsigned int>::const_iterator iter = suspectAlleleCounts.begin();
-                iter != suspectAlleleCounts.end(); iter++) {
-            const string& allele = iter->first;
-            unsigned int count = iter->second;
-            alleleProportions[allele] += count *
-//                    (samplingAdjustment * multiplierCorrection + (fst / (1 + fst)));
-                    (fst / (1 + fst));
-        }
-        return alleleProportions;
-    }
-
     double calculateKDropoutsLogProbability(double alpha, double dropoutRate, unsigned int k) {
         if (dropoutRate == 0) return LOG_ZERO;
         if (k == 0) return 0;

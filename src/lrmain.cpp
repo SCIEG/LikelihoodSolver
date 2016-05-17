@@ -11,6 +11,7 @@
 
 #include "LikelihoodSolver/UnknownsSolver.h"
 #include "utils/InputParserUtil.h"
+#include "utils/StlUtil.h"
 
 using namespace LabRetriever;
 
@@ -125,7 +126,7 @@ map<Race, vector<double> > run(const string& executablePath, const string& input
                         &locusToAssumedAlleles, &locusToUnattributedAlleles,
                         &locusSpecificDropout, &locusSpecificDropin, &lociToRun);
 
-    string alleleFrequencyTablePath = executablePath + "Allele Frequency Tables/";
+    const string alleleFrequencyTablePath = executablePath + "Allele Frequency Tables/";
     vector<Race> races = GetRaces(race, alleleFrequencyTablePath, lociToRun);
 
     map<Race, vector<double> > raceToSolverIndexToLogProb;
@@ -144,14 +145,23 @@ map<Race, vector<double> > run(const string& executablePath, const string& input
     for (set<string>::const_iterator iter = lociToRun.begin();
             iter != lociToRun.end(); iter++) {
         string locus = *iter;
+        const string alleleFrequencyTableFileName =
+                alleleFrequencyTablePath + locus + "_B.count.csv";
+	const vector<string>& suspectAlleles = locusToSuspectAlleles[locus];
+	const vector<set<string> >& assumedAlleles = locusToAssumedAlleles[locus];
+	const vector<set<string> >& unattributedAlleles = locusToUnattributedAlleles[locus];
+        map<Race, map<string, double> > raceToAlleleProportions =
+                GetRaceToAlleleProportions(alleleFrequencyTableFileName, suspectAlleles,
+                                           assumedAlleles, unattributedAlleles, fst);
         for (unsigned int raceIndex = 0; raceIndex < races.size(); raceIndex++) {
             Race curRace = races[raceIndex];
-            Configuration config = CreateConfiguration(
-                    alleleFrequencyTablePath, locus, curRace, alpha, dropinRate, dropoutRate, fst,
-                    identicalByDescentProbability, locusToSuspectAlleles, locusToAssumedAlleles,
-                    locusToUnattributedAlleles, locusSpecificDropout, locusSpecificDropin);
+	    const map<string, double>& alleleProportions = raceToAlleleProportions[curRace];
+            Configuration config(suspectAlleles, assumedAlleles, unattributedAlleles,
+                                 alleleProportions, identicalByDescentProbability,
+                                 GetValueOrDefault(locusSpecificDropout, locus, dropoutRate),
+                                 GetValueOrDefault(locusSpecificDropin, locus, dropinRate), alpha);
             for (unsigned int solverIndex = 0; solverIndex < likelihoodSolvers.size();
-                    solverIndex++) {
+                 solverIndex++) {
                 LikelihoodSolver* solver = likelihoodSolvers[solverIndex];
                 double logLikelihood = solver->getLogLikelihood(config);
                 raceToSolverIndexToLocusLogProb[curRace][solverIndex][locus] = logLikelihood;
