@@ -10,18 +10,11 @@
 #include "InputParserUtil.h"
 
 #include <cstdlib>
-#include <cerrno>
 
 #include "ProbabilityUtil.h"
+#include "StringUtil.h"
 
 namespace LabRetriever {
-namespace {
-bool ToDouble(const string& input, double* output) {
-    char* endPtr;
-    *output = strtod(input.c_str(), &endPtr);
-    return *endPtr == '\0' && errno == 0;
-}
-}
 
 void RetrieveDataFromCSV(const string& inputFileName, double* alpha, double* dropinRate,
                          double* dropoutRate, double* fst, Race* race,
@@ -36,29 +29,27 @@ void RetrieveDataFromCSV(const string& inputFileName, double* alpha, double* dro
     for (; csvIndex < inputData.size(); csvIndex++) {
         const vector<string>& row = inputData[csvIndex];
         if (row.size() == 0) continue;
-        errno = 0;
-        char* endPtr;
 
         const string& header = row[0];
         if (header == "alpha") {
             if (row.size() <= 1) continue;
-            double value = strtod(row[1].c_str(), &endPtr);
-            if (*endPtr != '\0' || errno != 0) continue;
+	    double value;
+	    if (!ToDouble(row[1], &value)) continue;
             *alpha = value;
         } else if (header == "Drop-in rate") {
             if (row.size() <= 1) continue;
-            double value = strtod(row[1].c_str(), &endPtr);
-            if (*endPtr != '\0' || errno != 0) continue;
+	    double value;
+            if (!ToDouble(row[1], &value)) continue;
             *dropinRate = value;
         } else if (header == "Drop-out rate") {
             if (row.size() <= 1) continue;
-            double value = strtod(row[1].c_str(), &endPtr);
-            if (*endPtr != '\0' || errno != 0) continue;
+            double value;
+            if (!ToDouble(row[1], &value)) continue;
             *dropoutRate = value;
         } else if (header == "fst") {
             if (row.size() <= 1) continue;
-            double value = strtod(row[1].c_str(), &endPtr);
-            if (*endPtr != '\0' || errno != 0) continue;
+            double value;
+            if (!ToDouble(row[1], &value)) continue;
             *fst = value;
         } else if (header == "Race") {
             if (row.size() <= 1) continue;
@@ -69,18 +60,18 @@ void RetrieveDataFromCSV(const string& inputFileName, double* alpha, double* dro
             if (row.size() <= 3 || row[1].size() == 0 || row[2].size() == 0 || row[3].size() == 0)
                 continue;
 
-            double zeroAllelesInCommonProb = strtod(row[1].c_str(), &endPtr);
-            if (*endPtr != '\0' || errno != 0) continue;
-            double oneAlleleInCommonProb = strtod(row[2].c_str(), &endPtr);
-            if (*endPtr != '\0' || errno != 0) continue;
-            double twoAllelesInCommonProb = strtod(row[3].c_str(), &endPtr);
-            if (*endPtr != '\0' || errno != 0) continue;
+            double zeroAllelesInCommonProb, oneAlleleInCommonProb, twoAllelesInCommonProb;
+            if (!ToDouble(row[1], &zeroAllelesInCommonProb) ||
+                !ToDouble(row[2], &oneAlleleInCommonProb) ||
+                !ToDouble(row[3], &twoAllelesInCommonProb)) {
+                continue;
+            }
 
             identicalByDescentProbability->zeroAllelesInCommonProb = zeroAllelesInCommonProb;
             identicalByDescentProbability->oneAlleleInCommonProb = oneAlleleInCommonProb;
             identicalByDescentProbability->bothAllelesInCommonProb = twoAllelesInCommonProb;
         } else {
-            unsigned int index = header.find("-");
+            size_t index = header.find("-");
             if (index == string::npos) continue;
             string locus = header.substr(0, index);
             string locusType = header.substr(index + 1, header.size());

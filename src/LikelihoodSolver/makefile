@@ -40,3 +40,6 @@ UnknownsSolver.o: UnknownsSolver.cpp
 
 LikelihoodSolver.o: LikelihoodSolver.cpp
 	g++ -I ../../lib/boost_1_53_0 -g -c LikelihoodSolver.cpp
+
+clean:
+	rm -f *.o

@@ -31,5 +31,7 @@ force:
 	true
 
 clean:
-	rm -rf *.o */*.o labr ../target/labr*
+	$(MAKE) -C LikelihoodSolver clean
+	$(MAKE) -C utils clean
+	rm -f *.o labr ../target/labr*
 

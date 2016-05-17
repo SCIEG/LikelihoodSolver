@@ -8,29 +8,45 @@
 //==================================================================================================
 
 #include <iostream>
+#include <string>
+
+#include "Configuration.h"
+#include "utils/FileReaderUtil.h"
+#include "utils/StringUtil.h"
 
 int main(int argc, char* argv[]) {
-  if (argc != 4) {
-    const string usageString =
-      "Usage: \n"
-      "    " + argv[0] + " input.csv N samples\n"
-      "\n"
-      " - N is the number of unknowns in the numerator of the LR. Thus, N+1 is the number of\n"
-      "   unknowns in the denominator.\n"
-      " - samples is the number of suspects to sample.";
-    std::cout << usageString << std::endl;
-    return -1;
-  }
+    const std::string prog = argv[0];
+    if (argc != 4) {
+        std::cerr << "Usage:" << std::endl
+                  << "    " << prog << " input.csv N samples" << std::endl
+                  << std::endl
+                  << " - N is the number of unknowns in the numerator of the LR. Thus, N+1"
+                  << std::endl
+                  << "   is the number of unknowns in the denominator." << std::endl
+                  << " - samples is the number of suspects to sample." << std::endl;
+        return -1;
+    }
 
-  string executablePath = string(argv[0]);
+    // The executable file name is 'sampler' but on windows is 'sampler.exe'
+    int fileNameLength = 7;
+    if (prog.find(".exe") != std::string::npos) {
+        fileNameLength += 4;
+    }
+    const std::string executablePath = prog.substr(0, prog.length() - fileNameLength);
 
-  // The executable file name is 'sampler' but on windows is 'sampler.exe'
-  int fileNameLength = 7;
-  if (executablePath.find(".exe") != string::npos) {
-    fileNameLength += 4;
-  }
+    const std::string inputFile = argv[1];
 
-  // Parse N and samples as ints.
-  
-  return 0;
+    int n;
+    if (!LabRetriever::ToInt(argv[2], &n) || n < 0) {
+      std::cerr << "N must be a non-negative integer!" << std::endl;
+      return -1;
+    }
+
+    int samples;
+    if (!LabRetriever::ToInt(argv[3], &samples) || samples <= 0) {
+      std::cerr << "samples must be a positive integer!" << std::endl;
+      return -1;
+    }
+
+    return 0;
 }

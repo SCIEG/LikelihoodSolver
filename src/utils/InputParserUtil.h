@@ -34,14 +34,15 @@ void RetrieveDataFromCSV(const string& inputFileName, double* alpha, double* dro
                          set<string>* lociToRun);
 
 Configuration CreateConfiguration(
-  const string& alleleFrequencyTablePath,
-    const string& locus, const Race& race, double alpha, double dropinRate, double dropoutRate,
-    double fst, const IdenticalByDescentProbability& identicalByDescentProbability,
-    const map<string, vector<string> >& locusToSuspectAlleles,
-    const map<string, vector<set<string> > >& locusToAssumedAlleles,
-    const map<string, vector<set<string> > >& locusToUnattributedAlleles,
-    const map<string, double>& locusSpecificDropout,
-    const map<string, double>& locusSpecificDropin);
+        const string& alleleFrequencyTablePath, const string& locus, const Race& race, double alpha,
+        double dropinRate, double dropoutRate, double fst,
+        const IdenticalByDescentProbability& identicalByDescentProbability,
+        const map<string, vector<string> >& locusToSuspectAlleles,
+        const map<string, vector<set<string> > >& locusToAssumedAlleles,
+        const map<string, vector<set<string> > >& locusToUnattributedAlleles,
+        const map<string, double>& locusSpecificDropout,
+        const map<string, double>& locusSpecificDropin);
+
 }  // namespace LabRetriever
 
 #endif /* INPUTPARSERUTIL_H_ */
