@@ -10,32 +10,37 @@
 #ifndef INPUTPARSERUTIL_H_
 #define INPUTPARSERUTIL_H_
 
-#include <vector>
 #include <map>
+#include <set>
+#include <string>
+#include <vector>
 
 #include "../Configuration.h"
 #include "FileReaderUtil.h"
 
-using namespace std;
-
 namespace LabRetriever {
 
-vector<Race> GetRaces(const Race& race, const string& alleleFrequencyTablePath,
-                      const set<string>& lociToRun);
+inline std::string GetAlleleFrequencyTableFileName(const std::string& alleleFrequencyTablePath, const std::string locus) {
+  return alleleFrequencyTablePath + locus + "_B.count.csv";
+}
 
-map<Race, map<string, double> > GetRaceToAlleleProportions(
-        const string& alleleFrequencyTableFileName, const vector<string>& suspectAlleles,
-        const vector<set<string> >& assumedAlleles, const vector<set<string> >& unattributedAlleles,
-        double fst);
+std::vector<Race> GetRaces(const Race& race, const std::string& alleleFrequencyTablePath,
+                           const std::set<std::string>& lociToRun);
 
-void RetrieveDataFromCSV(const string& inputFileName, double* alpha, double* dropinRate,
-                         double* dropoutRate, double* fst, Race* race,
-                         IdenticalByDescentProbability* identicalByDescentProbability,
-                         map<string, vector<string> >* locusToSuspectAlleles,
-                         map<string, vector<set<string> > >* locusToAssumedAlleles,
-                         map<string, vector<set<string> > >* locusToUnattributedAlleles,
-                         map<string, double>* locusSpecificDropout,
-                         map<string, double>* locusSpecificDropin, set<string>* lociToRun);
+std::map<Race, std::map<string, double> > GetRaceToAlleleProportions(
+        const std::string& alleleFrequencyTableFileName,
+        const std::vector<std::string>& suspectAlleles,
+        const std::vector<std::set<std::string> >& assumedAlleles,
+        const std::vector<std::set<std::string> >& unattributedAlleles, double fst);
+
+void RetrieveDataFromCSV(
+        const std::string& inputFileName, double* alpha, double* dropinRate, double* dropoutRate,
+        double* fst, Race* race, IdenticalByDescentProbability* identicalByDescentProbability,
+        std::map<std::string, std::vector<std::string> >* locusToSuspectAlleles,
+        std::map<std::string, std::vector<std::set<std::string> > >* locusToAssumedAlleles,
+        std::map<std::string, std::vector<std::set<std::string> > >* locusToUnattributedAlleles,
+        std::map<std::string, double>* locusSpecificDropout,
+        std::map<std::string, double>* locusSpecificDropin, std::set<std::string>* lociToRun);
 
 }  // namespace LabRetriever
 

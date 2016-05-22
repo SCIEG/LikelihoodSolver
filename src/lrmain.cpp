@@ -145,9 +145,11 @@ map<Race, vector<double> > run(const string& executablePath, const string& input
     for (set<string>::const_iterator iter = lociToRun.begin();
             iter != lociToRun.end(); iter++) {
         string locus = *iter;
+        // const string alleleFrequencyTableFileName =
+        //         alleleFrequencyTablePath + locus + "_B.count.csv";
         const string alleleFrequencyTableFileName =
-                alleleFrequencyTablePath + locus + "_B.count.csv";
-	const vector<string>& suspectAlleles = locusToSuspectAlleles[locus];
+                GetAlleleFrequencyTableFileName(alleleFrequencyTablePath, locus);
+        const vector<string>& suspectAlleles = locusToSuspectAlleles[locus];
 	const vector<set<string> >& assumedAlleles = locusToAssumedAlleles[locus];
 	const vector<set<string> >& unattributedAlleles = locusToUnattributedAlleles[locus];
         map<Race, map<string, double> > raceToAlleleProportions =

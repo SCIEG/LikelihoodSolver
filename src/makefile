@@ -1,4 +1,6 @@
 
+all: copy-labr copy-sampler
+
 copy-labr: labr
 	cp labr ../target/labr
 
@@ -18,6 +20,14 @@ labr: LikelihoodSolver utils Configuration.o lrmain.cpp
 		utils/DebugUtil.o utils/InputParserUtil.o utils/StringUtil.o\
 		-o labr
 
+copy-sampler: sampler
+	cp sampler ../target/sampler
+
+sampler: Configuration.o utils sampler-main.cpp
+	g++ -I ../lib/boost_1_53_0 -g sampler-main.cpp \
+		utils/FileReaderUtil.o utils/StringUtil.o utils/InputParserUtil.o \
+		-o sampler
+
 Configuration.o: Configuration.cpp
 	g++ -g -c Configuration.cpp
 
@@ -28,7 +38,6 @@ utils: force
 	$(MAKE) -C utils
 
 force:
-	true
 
 clean:
 	$(MAKE) -C LikelihoodSolver clean

@@ -8,10 +8,14 @@
 //==================================================================================================
 
 #include <iostream>
+#include <map>
+#include <set>
 #include <string>
+#include <vector>
 
 #include "Configuration.h"
 #include "utils/FileReaderUtil.h"
+#include "utils/InputParserUtil.h"
 #include "utils/StringUtil.h"
 
 int main(int argc, char* argv[]) {
@@ -47,6 +51,26 @@ int main(int argc, char* argv[]) {
       std::cerr << "samples must be a positive integer!" << std::endl;
       return -1;
     }
+
+    double alpha;
+    double dropinRate;
+    double dropoutRate;
+    double fst;
+    LabRetriever::Race race;
+    LabRetriever::IdenticalByDescentProbability identicalByDescentProbability(1, 0, 0);
+    std::map<std::string, std::vector<std::string> > locusToSuspectAlleles;
+    std::map<std::string, std::vector<std::set<std::string> > > locusToAssumedAlleles;
+    std::map<std::string, std::vector<std::set<std::string> > > locusToUnattributedAlleles;
+    std::map<std::string, double> locusSpecificDropout;
+    std::map<std::string, double> locusSpecificDropin;
+    std::set<std::string> lociToRun;
+    LabRetriever::RetrieveDataFromCSV(inputFile, &alpha, &dropinRate, &dropoutRate, &fst, &race,
+                                      &identicalByDescentProbability, &locusToSuspectAlleles,
+                                      &locusToAssumedAlleles, &locusToUnattributedAlleles,
+                                      &locusSpecificDropout, &locusSpecificDropin, &lociToRun);
+
+    const std::vector<LabRetriever::Race> races =
+            LabRetriever::GetRaces(race, executablePath, lociToRun);
 
     return 0;
 }
