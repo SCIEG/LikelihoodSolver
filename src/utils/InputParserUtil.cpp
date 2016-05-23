@@ -13,7 +13,13 @@
 
 #include "StringUtil.h"
 
+using namespace std;
+
 namespace LabRetriever {
+
+string GetAlleleFrequencyTableFileName(const string& alleleFrequencyTablePath, const string locus) {
+    return alleleFrequencyTablePath + locus + "_B.count.csv";
+}
 
 vector<Race> GetRaces(const Race& race, const string& alleleFrequencyTablePath,
                       const set<string>& lociToRun) {
@@ -24,8 +30,8 @@ vector<Race> GetRaces(const Race& race, const string& alleleFrequencyTablePath,
         for (set<string>::const_iterator iter = lociToRun.begin(); iter != lociToRun.end();
              iter++) {
             string locus = *iter;
-            map<Race, map<string, unsigned int> > raceToAlleleCounts =
-                getAlleleCountsFromFile(alleleFrequencyTablePath + locus + "_B.count.csv");
+            map<Race, map<string, unsigned int> > raceToAlleleCounts = getAlleleCountsFromFile(
+                    GetAlleleFrequencyTableFileName(alleleFrequencyTablePath, locus));
             for (map<Race, map<string, unsigned int> >::const_iterator race_iter =
                      raceToAlleleCounts.begin();
                  race_iter != raceToAlleleCounts.end(); race_iter++) {

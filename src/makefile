@@ -23,9 +23,11 @@ labr: LikelihoodSolver utils Configuration.o lrmain.cpp
 copy-sampler: sampler
 	cp sampler ../target/sampler
 
-sampler: Configuration.o utils sampler-main.cpp
-	g++ -I ../lib/boost_1_53_0 -g sampler-main.cpp \
+sampler: LikelihoodSolver utils Configuration.o sampler-main.cpp
+	g++ -I ../lib/boost_1_53_0 -g sampler-main.cpp Configuration.o \
+		LikelihoodSolver/LikelihoodSolver.o LikelihoodSolver/UnknownsSolver.o \
 		utils/FileReaderUtil.o utils/StringUtil.o utils/InputParserUtil.o \
+		utils/ProbabilityUtil.o \
 		-o sampler
 
 Configuration.o: Configuration.cpp

@@ -20,9 +20,8 @@
 
 namespace LabRetriever {
 
-inline std::string GetAlleleFrequencyTableFileName(const std::string& alleleFrequencyTablePath, const std::string locus) {
-  return alleleFrequencyTablePath + locus + "_B.count.csv";
-}
+std::string GetAlleleFrequencyTableFileName(const std::string& alleleFrequencyTablePath,
+                                            const std::string locus);
 
 std::vector<Race> GetRaces(const Race& race, const std::string& alleleFrequencyTablePath,
                            const std::set<std::string>& lociToRun);

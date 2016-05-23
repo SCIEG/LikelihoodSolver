@@ -14,9 +14,17 @@
 #include <vector>
 
 #include "Configuration.h"
+#include "LikelihoodSolver/UnknownsSolver.h"
 #include "utils/FileReaderUtil.h"
 #include "utils/InputParserUtil.h"
 #include "utils/StringUtil.h"
+
+double GetDemonimatorLogLikelihood(int numUnknowns, const LabRetriever::Configuration& config) {
+  LabRetriever::UnknownsSolver solver(2 * numUnknowns /* numUnknownAlleles */);
+  return solver.getLogLikelihood(config);
+}
+
+// TODO: Add a --full flag.
 
 int main(int argc, char* argv[]) {
     const std::string prog = argv[0];
@@ -27,7 +35,19 @@ int main(int argc, char* argv[]) {
                   << " - N is the number of unknowns in the numerator of the LR. Thus, N+1"
                   << std::endl
                   << "   is the number of unknowns in the denominator." << std::endl
-                  << " - samples is the number of suspects to sample." << std::endl;
+                  << " - samples is the number of suspects to sample." << std::endl
+		  << std::endl
+		  << "This program calculates the likelihood ratio of the suspect (as denoted in"
+		  << std::endl
+		  << "the input file) and of a number of randomly sampled allele profiles, and"
+		  << std::endl
+		  << "compares the suspect's LR to the sampled distribution of LRs. The LR"
+		  << std::endl
+		  << "calculations are made under the same distribution (corrected for fst and"
+		  << std::endl
+		  << "rare alleles), and thus is not the same as manually calling labr multiple"
+		  << std::endl
+		  << "times.";
         return -1;
     }
 
@@ -72,5 +92,7 @@ int main(int argc, char* argv[]) {
     const std::vector<LabRetriever::Race> races =
             LabRetriever::GetRaces(race, executablePath, lociToRun);
 
+    const std::string alleleFrequencyTableFileName;
+    
     return 0;
 }
