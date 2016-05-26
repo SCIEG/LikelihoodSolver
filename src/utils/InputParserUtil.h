@@ -26,7 +26,7 @@ std::string GetAlleleFrequencyTableFileName(const std::string& alleleFrequencyTa
 std::vector<Race> GetRaces(const Race& race, const std::string& alleleFrequencyTablePath,
                            const std::set<std::string>& lociToRun);
 
-std::map<Race, std::map<string, double> > GetRaceToAlleleProportions(
+std::map<Race, std::map<std::string, double> > GetRaceToAlleleProportions(
         const std::string& alleleFrequencyTableFileName,
         const std::vector<std::string>& suspectAlleles,
         const std::vector<std::set<std::string> >& assumedAlleles,
