@@ -1,8 +1,12 @@
 .DS_STORE
+.clang-format
 *.exe
 *.o
 *.app
 labr
+sampler
+
+*~
 
 .idea/
 *.iml
