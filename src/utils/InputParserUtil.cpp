@@ -18,7 +18,12 @@ using namespace std;
 namespace LabRetriever {
 
 string GetAlleleFrequencyTableFileName(const string& alleleFrequencyTablePath, const string locus) {
-    return alleleFrequencyTablePath + locus + "_B.count.csv";
+    const string path = (alleleFrequencyTablePath.size() > 0 &&
+                         (alleleFrequencyTablePath[alleleFrequencyTablePath.size() - 1] != '/' ||
+                          alleleFrequencyTablePath[alleleFrequencyTablePath.size() - 1] != '\\'))
+                                ? alleleFrequencyTablePath + "/"
+                                : alleleFrequencyTablePath;
+    return path + locus + "_B.count.csv";
 }
 
 vector<Race> GetRaces(const Race& race, const string& alleleFrequencyTablePath,

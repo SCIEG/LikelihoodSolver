@@ -1,23 +1,28 @@
+
+CXX := g++
+CXXFLAGS := -g -O2 -fPIC -c
+INCLUDES := -I ../../lib/boost_1_53_0
+
 all: DebugUtil.o FileReaderUtil.o LikelihoodUtil.o ProbabilityUtil.o InputParserUtil.o \
      StringUtil.o
 
 DebugUtil.o: DebugUtil.cpp DebugUtil.h
-	g++ -I ../../lib/boost_1_53_0 -g -c DebugUtil.cpp
+	$(CXX) $(INCLUDES) $(CXXFLAGS) DebugUtil.cpp
 
 FileReaderUtil.o: FileReaderUtil.cpp FileReaderUtil.h
-	g++ -I ../../lib/boost_1_53_0 -g -c FileReaderUtil.cpp
+	$(CXX) $(INCLUDES) $(CXXFLAGS) FileReaderUtil.cpp
 
 LikelihoodUtil.o: LikelihoodUtil.cpp LikelihoodUtil.h
-	g++ -I ../../lib/boost_1_53_0 -g -c LikelihoodUtil.cpp
+	$(CXX) $(INCLUDES) $(CXXFLAGS) LikelihoodUtil.cpp
 
 ProbabilityUtil.o: ProbabilityUtil.cpp ProbabilityUtil.h
-	g++ -I ../../lib/boost_1_53_0 -g -c ProbabilityUtil.cpp
+	$(CXX) $(INCLUDES) $(CXXFLAGS) ProbabilityUtil.cpp
 
 InputParseUtil.o: InputParserUtil.cpp InputParserUtil.h
-	g++ -I ../../lib/boost_1_53_0 -g -c InputParserUtil.cpp
+	$(CXX) $(INCLUDES) $(CXXFLAGS) InputParserUtil.cpp
 
 StringUtil.o: StringUtil.cpp StringUtil.h
-	g++ -I ../../lib/boost_1_53_0 -g -c StringUtil.cpp
+	$(CXX) $(INCLUDES) $(CXXFLAGS) StringUtil.cpp
 
 clean:
 	rm -f *.o

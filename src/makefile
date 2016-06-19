@@ -1,11 +1,16 @@
 
+CXX := g++
+CXXFLAGS := -g -O2 -fPIC
+INCLUDES := -I ../lib/boost_1_53_0
+
 all: copy-labr copy-sampler
 
 copy-labr: labr
 	cp labr ../target/labr
 
-labr: LikelihoodSolver utils Configuration.o lrmain.cpp
-	g++ -I ../lib/boost_1_53_0 -g lrmain.cpp Configuration.o LikelihoodSolver/LikelihoodSolver.o \
+labr: deps lrmain.cpp
+	$(CXX) $(CXXFLAGS) $(INCLUDES) lrmain.cpp Configuration.o \
+		LikelihoodSolver/LikelihoodSolver.o \
 		LikelihoodSolver/CachingSolver.o \
 		LikelihoodSolver/NoSuspectFourUnknownsLikelihoodSolver.o \
 		LikelihoodSolver/NoSuspectOneUnknownLikelihoodSolver.o \
@@ -23,15 +28,17 @@ labr: LikelihoodSolver utils Configuration.o lrmain.cpp
 copy-sampler: sampler
 	cp sampler ../target/sampler
 
-sampler: LikelihoodSolver utils Configuration.o sampler-main.cpp
-	g++ -I ../lib/boost_1_53_0 -g sampler-main.cpp Configuration.o \
+sampler: deps sampler-main.cpp
+	$(CXX) $(CXXFLAGS) $(INCLUDES) sampler-main.cpp Configuration.o \
 		LikelihoodSolver/LikelihoodSolver.o LikelihoodSolver/UnknownsSolver.o \
 		utils/FileReaderUtil.o utils/StringUtil.o utils/InputParserUtil.o \
 		utils/ProbabilityUtil.o \
 		-o sampler
 
+deps: Configuration.o LikelihoodSolver utils
+
 Configuration.o: Configuration.cpp
-	g++ -g -c Configuration.cpp
+	$(CXX) $(CXXFLAGS) -c Configuration.cpp
 
 LikelihoodSolver: force
 	$(MAKE) -C LikelihoodSolver
