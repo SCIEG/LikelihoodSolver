@@ -12,7 +12,7 @@
 #include "../Configuration.h"
 #include "../utils/ProbabilityUtil.h"
 
-//#include <iostream>
+// #include <iostream>
 #include <sstream>
 
 using namespace std;
@@ -20,19 +20,20 @@ using namespace std;
 namespace LabRetriever {
 
 class UnknownsSolverImpl {
-public:
+   public:
     static double getUnknownProbability(const AlleleProfile& alleleProfile,
-            const std::vector<ReplicateData>& data,
-            const std::map<std::string, double>& alleleProportions,
-            double alpha, double dropoutRate, double dropinRate, double noDropinProb,
-            unsigned int numUnknownAlleles);
-private:
+                                        const std::vector<ReplicateData>& data,
+                                        const std::map<std::string, double>& alleleProportions,
+                                        double alpha, double dropoutRate, double dropinRate,
+                                        double noDropinProb, unsigned int numUnknownAlleles);
+
+   private:
+    // TODO: Fold renormalizationFactors with data.
     UnknownsSolverImpl(const std::vector<std::string>& alleles, const AlleleProfile& alleleProfile,
-            const ReplicateData& data,
-            const std::map<std::string, double>& alleleProportions,
-            double renormalizationFactors,
-            double alpha, double dropoutRate, double dropinRate, double noDropinProb,
-            unsigned int numUnknownAlleles);
+                       const std::vector<ReplicateData>& data,
+                       const std::map<std::string, double>& alleleProportions,
+                       const std::vector<double>& renormalizationFactors, double alpha, double dropoutRate,
+                       double dropinRate, double noDropinProb, unsigned int numUnknownAlleles);
     virtual ~UnknownsSolverImpl();
 
     double solve() const;
@@ -40,13 +41,14 @@ private:
     double f(const std::string& allele, unsigned int count) const;
     double X(int numAlleles, int alleleStartIndex, int alleleEndIndex) const;
     double Y(int numAlleles, int alleleStartIndex, int alleleEndIndex,
-            const std::vector<unsigned int>& preallocatedCounts) const;
+             const std::vector<unsigned int>& preallocatedCounts) const;
 
     const std::vector<std::string>& alleles;
     const AlleleProfile& alleleProfile;
-    const ReplicateData& data;
+    const std::vector<ReplicateData>& data;
     const std::map<std::string, double>& alleleProportions;
-    double renormalizationFactor;
+    const std::vector<double>& renormalizationFactors;
+    unsigned int numReplicates;
     double alpha;
     double dropoutRate;
     double dropinRate;
@@ -55,15 +57,24 @@ private:
 };
 
 UnknownsSolverImpl::UnknownsSolverImpl(const std::vector<std::string>& alleles,
-        const AlleleProfile& alleleProfile, const ReplicateData& data,
-        const std::map<std::string, double>& alleleProportions,
-        double renormalizationFactor,
-        double alpha, double dropoutRate, double dropinRate, double noDropinProb,
-        unsigned int numUnknownAlleles)
-    : alleles(alleles), alleleProfile(alleleProfile), data(data),
-      alleleProportions(alleleProportions), renormalizationFactor(renormalizationFactor),
-      alpha(alpha), dropoutRate(dropoutRate), dropinRate(dropinRate), noDropinProb(noDropinProb),
+                                       const AlleleProfile& alleleProfile,
+                                       const std::vector<ReplicateData>& data,
+                                       const std::map<std::string, double>& alleleProportions,
+                                       const std::vector<double>& renormalizationFactors, double alpha,
+                                       double dropoutRate, double dropinRate, double noDropinProb,
+                                       unsigned int numUnknownAlleles)
+    : alleles(alleles),
+      alleleProfile(alleleProfile),
+      data(data),
+      alleleProportions(alleleProportions),
+      renormalizationFactors(renormalizationFactors),
+      numReplicates(data.size()),
+      alpha(alpha),
+      dropoutRate(dropoutRate),
+      dropinRate(dropinRate),
+      noDropinProb(noDropinProb),
       numUnknownAlleles(numUnknownAlleles) {
+    // TODO: Check that data.size() == renormalizationFactors.size().
 }
 
 UnknownsSolverImpl::~UnknownsSolverImpl() {
@@ -110,32 +121,35 @@ unsigned int perm(const map<string, unsigned int>& b) {
 
 double UnknownsSolverImpl::f(const string& allele, unsigned int count) const {
     const double oneAlleleFrequency = alleleProportions.find(allele)->second;
-    const double countAllelesFrequency = pow(oneAlleleFrequency, (double) count);
+    const double countAllelesFrequency = pow(oneAlleleFrequency, (double)count);
     const unsigned int adjCount = count + alleleProfile.getAlleleCounts(allele);
 
-    bool alleleIsMasked = data.maskedAlleles.count(allele) != 0;
+    double prob = 1;
+    for (unsigned int index = 0; index < numReplicates; ++index) {
+        const ReplicateData& replicate_data = data[index];
+        bool alleleIsMasked = replicate_data.maskedAlleles.count(allele) != 0;
 
-    if (alleleIsMasked) {
-        return countAllelesFrequency;
-    }
+        if (alleleIsMasked) {
+	    continue;
+        }
 
-    // Note if count == 0, countAllelesFrequency is 1.
-    bool alleleIsPresent = data.unattributedAlleles.count(allele) != 0;
-    if (alleleIsPresent) {
-        if (adjCount == 0) {
-            return countAllelesFrequency * dropinRate * oneAlleleFrequency / renormalizationFactor;
+        // Note if count == 0, countAllelesFrequency is 1.
+        bool alleleIsPresent = replicate_data.unattributedAlleles.count(allele) != 0;
+        if (alleleIsPresent) {
+            if (adjCount == 0) {
+                prob *= dropinRate * oneAlleleFrequency / renormalizationFactors[index];
+            } else {
+                prob *= 1 - calculateKDropoutsProbability(alpha, dropoutRate, adjCount);
+            }
         } else {
-            return countAllelesFrequency *
-                    (1 - calculateKDropoutsProbability(alpha, dropoutRate, adjCount));
-        }
-    } else {
-        if (adjCount == 0) {
-            return countAllelesFrequency;  // Note, this is equal to 1.
-        } else {
-            return countAllelesFrequency *
-                    calculateKDropoutsProbability(alpha, dropoutRate, adjCount);
+            if (adjCount == 0) {
+                continue;
+            } else {
+                prob *= calculateKDropoutsProbability(alpha, dropoutRate, adjCount);
+            }
         }
     }
+    return countAllelesFrequency * prob;
 }
 
 double UnknownsSolverImpl::getUnknownProbability(const AlleleProfile& alleleProfile,
@@ -152,7 +166,7 @@ double UnknownsSolverImpl::getUnknownProbability(const AlleleProfile& alleleProf
 
     // Parallel vector to data.
     vector<double> renormalizationFactors(data.size());
-    for (int i = 0; i < data.size(); i++) {
+    for (unsigned int i = 0; i < data.size(); i++) {
         double inverseNormalizationFactor = 0;
         const set<string>& maskedAlleles = data[i].maskedAlleles;
         for (set<string>::iterator it = maskedAlleles.begin(); it != maskedAlleles.end(); it++) {
@@ -163,47 +177,107 @@ double UnknownsSolverImpl::getUnknownProbability(const AlleleProfile& alleleProf
         renormalizationFactors[i] = (1 - inverseNormalizationFactor);
     }
 
-    double probability = 1;
-    for (int i = 0; i < data.size(); i++) {
-        UnknownsSolverImpl solver(alleles, alleleProfile, data[i], alleleProportions,
-                renormalizationFactors[i], alpha, dropoutRate, dropinRate, noDropinProb,
-                numUnknownAlleles);
-        probability *= solver.solve();
+    UnknownsSolverImpl solver(alleles, alleleProfile, data, alleleProportions,
+                              renormalizationFactors, alpha, dropoutRate, dropinRate, noDropinProb,
+                              numUnknownAlleles);
+    return solver.solve();
+}
+
+namespace {
+
+class CombinationIterator {
+   public:
+    CombinationIterator(unsigned int n, unsigned int k) : n(n) {
+        currentCombination.reserve(k);
+        for (unsigned int i = 0; i < k; ++i) {
+            currentCombination.push_back(i);
+        }
+        // Decrement the last value so that next() can be called first.
+        --currentCombination.back();
     }
 
-    return probability;
+    const std::vector<unsigned int>& getCurrentCombination() const { return currentCombination; }
+
+    // Changes the current combination, and returns if combination is valid.
+    bool next() {
+        ++currentCombination.back();
+
+        // Check for ripple.
+        unsigned int limit = n;
+        unsigned int index = currentCombination.size() - 1;
+        while (currentCombination[index] >= limit) {
+            if (index == 0) { return false; }
+            // Ripple previous digit, then check for ripple on digit before.
+            ++currentCombination[index - 1];
+            --index;
+            --limit;
+        }
+        // Fix all digits past the "okay" digit.
+        for (++index; index < currentCombination.size(); ++index) {
+            currentCombination[index] = currentCombination[index - 1] + 1;
+        }
+        return true;
+    }
+
+   private:
+    const unsigned int n;
+    std::vector<unsigned int> currentCombination;
+};
 }
 
 double UnknownsSolverImpl::solve() const {
     const double x = this->X(numUnknownAlleles, 0, alleles.size());
 
-    // Find which alleles in the CSP are not explained by the suspect. If all of these alleles
-    // appear in some suspect-unknowns combination, we have a case of drop-in.
-    set<string> leftoverCSPAlleles;
-    for (set<string>::const_iterator iter = data.unattributedAlleles.begin();
-         iter != data.unattributedAlleles.end(); iter++) {
-        const string& allele = *iter;
-        if (!alleleProfile.contains(allele)) {
-            leftoverCSPAlleles.insert(allele);
-        }
-    }
+    // Use inclusion-exclusion principle over replicates to correct drop-in. That is, correct
+    // drop-in for all cases where at least one replicate has drop-in, then correct the correction
+    // for all cases where at least two replicate has drop-in, etc.
+    double prob = 0;
+    double previousFactor = 0;
+    for (unsigned int numPossibleDropInCases = 1; numPossibleDropInCases <= numReplicates;
+         ++numPossibleDropInCases) {
+        CombinationIterator combinationIterator(numReplicates, numPossibleDropInCases);
+        double y = 0;
+        while (combinationIterator.next()) {
+            const std::vector<unsigned int> currentCombination =
+                    combinationIterator.getCurrentCombination();
+            // Find which alleles in the CSP are not explained by the suspect. If all of these
+            // alleles appear in some suspect-unknowns combination, we have a case of drop-in.
+            set<string> leftoverCSPAlleles;
+            for (std::vector<unsigned int>::const_iterator iter = currentCombination.begin();
+                 iter != currentCombination.end(); ++iter) {
+                unsigned int replicateIndex = *iter;
+                const ReplicateData& replicateData = data[replicateIndex];
+                for (set<string>::const_iterator iter = replicateData.unattributedAlleles.begin();
+                     iter != replicateData.unattributedAlleles.end(); iter++) {
+                    const string& allele = *iter;
+                    if (!alleleProfile.contains(allele)) {
+                        leftoverCSPAlleles.insert(allele);
+                    }
+                }
+            }
 
-    double y = 0;
-    if (numUnknownAlleles >= leftoverCSPAlleles.size()) {
-        vector<unsigned int> preallocatedCounts(alleles.size() + 1);
-        preallocatedCounts[0] = 0;
-        for (unsigned int i = 0; i < alleles.size(); i++) {
-            const string& allele = alleles[i];
-            preallocatedCounts[i + 1] =
-                    preallocatedCounts[i] + (leftoverCSPAlleles.count(allele) ? 1 : 0);
+            if (numUnknownAlleles >= leftoverCSPAlleles.size()) {
+                vector<unsigned int> preallocatedCounts(alleles.size() + 1);
+                preallocatedCounts[0] = 0;
+                for (unsigned int i = 0; i < alleles.size(); i++) {
+                    const string& allele = alleles[i];
+                    preallocatedCounts[i + 1] =
+                            preallocatedCounts[i] + (leftoverCSPAlleles.count(allele) ? 1 : 0);
+                }
+                y += this->Y(numUnknownAlleles - leftoverCSPAlleles.size(), 0, alleles.size(),
+                             preallocatedCounts);
+            }
         }
-        y = this->Y(numUnknownAlleles - leftoverCSPAlleles.size(), 0, alleles.size(),
-                    preallocatedCounts);
+        int n = numPossibleDropInCases;  // For arithmetic purposes
+        double newFactor = 1 - pow(noDropinProb, n);
+        double tmp = y * (n * previousFactor - newFactor);
+        previousFactor = newFactor;
+        prob += tmp;
     }
     // std::cout << "x: " << x << std::endl;
     // std::cout << "y: " << y << std::endl;
     // std::cout << noDropinProb << std::endl;
-    return x - (1 - noDropinProb) * y;
+    return x + prob;
 }
 
 // alleleStartIndex is inclusive, alleleEndIndex is exclusive.
@@ -216,6 +290,8 @@ double UnknownsSolverImpl::X(int numAlleles, int alleleStartIndex, int alleleEnd
 double UnknownsSolverImpl::Y(int numAlleles, int alleleStartIndex, int alleleEndIndex,
         const vector<unsigned int>& preallocatedCounts) const {
 //    std::cout << "calling y with numAlleles " << numAlleles << " from " << alleleStartIndex << " to " << alleleEndIndex << std::endl;
+    if (numAlleles < 0) return 0;
+
     unsigned int numPreallocatedAllelesInCurrentSet =
             preallocatedCounts[alleleEndIndex] - preallocatedCounts[alleleStartIndex];
     if (alleleStartIndex == alleleEndIndex - 1) {
