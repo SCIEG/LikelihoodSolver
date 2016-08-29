@@ -175,57 +175,35 @@ double UnknownsSolverImpl::getUnknownProbability(const AlleleProfile& alleleProf
 }
 
 double UnknownsSolverImpl::solve() const {
-    if (alleleProfile.getAlleles().empty()) {
-        unsigned int numCSPAlleles = data.unattributedAlleles.size();
-        double x = this->X(numUnknownAlleles, 0, alleles.size());
-        double y = 0;
-        if (numUnknownAlleles >= numCSPAlleles) {
-            // TODO: consider putting this as a member.
-            vector<unsigned int> CSPCounts(alleles.size() + 1);
-            CSPCounts[0] = 0;
-            for (unsigned int i = 0; i < alleles.size(); i++) {
-                CSPCounts[i + 1] = CSPCounts[i] +
-                        (data.unattributedAlleles.count(alleles[i]) > 0 ? 1 : 0);
-            }
-            y = this->Y(numUnknownAlleles - numCSPAlleles, 0, alleles.size(), CSPCounts);
-        }
-        return x - (1 - noDropinProb) * y;
-    } else {
-//        vector<unsigned int> suspectCounts(alleles.size() + 1);
-//        suspectCounts[0] = 0;
-//        for (unsigned int i = 0; i < alleles.size(); i++) {
-//            const string& allele = alleles[i];
-//            suspectCounts[i + 1] = suspectCounts[i] + alleleProfile.getAlleleCounts(allele);
-//            std::cout << suspectCounts[i+1] << " ";
-//        }
-        double x = this->X(numUnknownAlleles, 0, alleles.size());
+    const double x = this->X(numUnknownAlleles, 0, alleles.size());
 
-        set<string> leftoverCSPAlleles;
-        for (set<string>::const_iterator iter = data.unattributedAlleles.begin();
-                iter != data.unattributedAlleles.end(); iter++) {
-            const string& allele = *iter;
-            if (!alleleProfile.contains(allele)) {
-                leftoverCSPAlleles.insert(allele);
-            }
+    // Find which alleles in the CSP are not explained by the suspect. If all of these alleles
+    // appear in some suspect-unknowns combination, we have a case of drop-in.
+    set<string> leftoverCSPAlleles;
+    for (set<string>::const_iterator iter = data.unattributedAlleles.begin();
+         iter != data.unattributedAlleles.end(); iter++) {
+        const string& allele = *iter;
+        if (!alleleProfile.contains(allele)) {
+            leftoverCSPAlleles.insert(allele);
         }
-
-        double y = 0;
-        if (numUnknownAlleles >= leftoverCSPAlleles.size()) {
-            vector<unsigned int> preallocatedCounts(alleles.size() + 1);
-            preallocatedCounts[0] = 0;
-            for (unsigned int i = 0; i < alleles.size(); i++) {
-                const string& allele = alleles[i];
-                preallocatedCounts[i + 1] = preallocatedCounts[i] +
-                        (leftoverCSPAlleles.count(allele) ? 1 : 0);
-            }
-            y = this->Y(numUnknownAlleles - leftoverCSPAlleles.size(), 0, alleles.size(),
-                    preallocatedCounts);
-        }
-//        std::cout << "x: " << x << std::endl;
-//        std::cout << "y: " << y << std::endl;
-//        std::cout << noDropinProb << std::endl;
-        return x - (1 - noDropinProb) * y;
     }
+
+    double y = 0;
+    if (numUnknownAlleles >= leftoverCSPAlleles.size()) {
+        vector<unsigned int> preallocatedCounts(alleles.size() + 1);
+        preallocatedCounts[0] = 0;
+        for (unsigned int i = 0; i < alleles.size(); i++) {
+            const string& allele = alleles[i];
+            preallocatedCounts[i + 1] =
+                    preallocatedCounts[i] + (leftoverCSPAlleles.count(allele) ? 1 : 0);
+        }
+        y = this->Y(numUnknownAlleles - leftoverCSPAlleles.size(), 0, alleles.size(),
+                    preallocatedCounts);
+    }
+    // std::cout << "x: " << x << std::endl;
+    // std::cout << "y: " << y << std::endl;
+    // std::cout << noDropinProb << std::endl;
+    return x - (1 - noDropinProb) * y;
 }
 
 // alleleStartIndex is inclusive, alleleEndIndex is exclusive.
