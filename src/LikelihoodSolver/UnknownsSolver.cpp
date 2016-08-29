@@ -230,18 +230,8 @@ double UnknownsSolverImpl::solve() const {
 
 // alleleStartIndex is inclusive, alleleEndIndex is exclusive.
 double UnknownsSolverImpl::X(int numAlleles, int alleleStartIndex, int alleleEndIndex) const {
-    if (alleleStartIndex == alleleEndIndex - 1) {
-        // BASE CASE
-        return f(alleles[alleleStartIndex], numAlleles);
-    }
-    int alleleMidpointIndex = (alleleStartIndex + alleleEndIndex) / 2;
-    double likelihood = 0;
-    for (int i = 0; i <= numAlleles; i++) {
-        likelihood += choose(numAlleles, i)
-                * X(i, alleleStartIndex, alleleMidpointIndex)
-                * X(numAlleles - i, alleleMidpointIndex, alleleEndIndex);
-    }
-    return likelihood;
+    const vector<unsigned int> empty(alleleEndIndex + 1, 0);
+    return Y(numAlleles, alleleStartIndex, alleleEndIndex, empty);
 }
 
 // alleleStartIndex is inclusive, alleleEndIndex is exclusive.
