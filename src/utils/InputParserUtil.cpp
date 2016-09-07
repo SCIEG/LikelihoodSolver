@@ -10,6 +10,7 @@
 #include "InputParserUtil.h"
 
 #include <cstdlib>
+#include <algorithm>
 
 #include "StringUtil.h"
 
@@ -159,7 +160,7 @@ void RetrieveDataFromCSV(const string& inputFileName, double* alpha, double* dro
         string allele = *iter;
         vector<set<string> >& assumedAlleles = (*locusToAssumedAlleles)[allele];
         vector<set<string> >& unattributedAlleles = (*locusToUnattributedAlleles)[allele];
-        int len = max(assumedAlleles.size(), unattributedAlleles.size());
+        int len = std::max(assumedAlleles.size(), unattributedAlleles.size());
         assumedAlleles.resize(len);
         unattributedAlleles.resize(len);
     }

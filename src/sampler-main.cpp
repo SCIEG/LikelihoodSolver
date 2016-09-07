@@ -129,11 +129,11 @@ int main(int argc, char* argv[]) {
 
     int seed;
     if (argc == 5) {
-	if (!LabRetriever::ToInt(argv[4], &seed)) {
-	    std::cerr<< "SEED must be a positive integer!" << std::endl;
-	}
+        if (!LabRetriever::ToInt(argv[4], &seed)) {
+            std::cerr<< "SEED must be a positive integer!" << std::endl;
+        }
     } else {
-	seed = time(NULL);
+        seed = static_cast<int>(time(NULL));
     }
     srand(seed);
 
